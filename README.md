@@ -1,4 +1,3 @@
-```markdown
 # KUBER 🚕 - Distributed Ride-Hailing Backend
 
 A highly scalable, event-driven microservices architecture mimicking core ride-hailing backend systems (e.g., Uber, Lyft, Ola). Built to handle real-time geospatial querying, asynchronous event streaming, and concurrent financial transactions.
