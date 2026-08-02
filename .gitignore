@@ -1,0 +1,16 @@
+
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+
+.env
+
+mysql_data/
+redis_data/
+kafka_data/
+
+
+.DS_Store
+Thumbs.db
