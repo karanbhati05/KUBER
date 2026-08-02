@@ -32,7 +32,7 @@ Ensure you have the following installed on your machine:
 ```bash
 git clone [https://github.com/karanbhati05/KUBER.git](https://github.com/karanbhati05/KUBER.git)
 cd KUBER
-
+'''
 
 ### 3. Spin Up Infrastructure
 
@@ -132,7 +132,8 @@ To test the **Billing Engine** and database integrity, navigate to:
 
 **Author:** Karan Bhati
 
-**Contact:** [LinkedIn](https://www.google.com/search?q=https://www.linkedin.com/in/karanbhati) | [GitHub](https://www.google.com/search?q=https://github.com/karanbhati05)
+**Contact:** [LinkedIn](https://www.linkedin.com/in/karanbhati) | [GitHub](https://github.com/karanbhati05)
+
 
 ```
 
