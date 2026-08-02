@@ -33,7 +33,6 @@ Ensure you have the following installed on your machine:
 git clone [https://github.com/karanbhati05/KUBER.git](https://github.com/karanbhati05/KUBER.git)
 cd KUBER
 
-```
 
 ### 3. Spin Up Infrastructure
 
