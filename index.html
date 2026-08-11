@@ -34,16 +34,8 @@
                     <p class="uber-brand-sub">Enterprise Distributed Platform • Auth & Registration</p>
                 </div>
 
-                <!-- Backend Health Badge -->
-                <div id="backend-health-tag" class="bio-prompt-box" style="margin-bottom:16px;">
-                    <i class="fa-solid fa-server"></i>
-                    <div>
-                        <strong id="health-title" style="font-size:12px;color:#06C167;">Connecting to Backend...</strong>
-                        <p id="health-sub" style="font-size:10px;color:#A6A6A6;">Target: https://kuber-tjn2.onrender.com</p>
-                    </div>
-                </div>
-
                 <!-- OFFICIAL CLERK SIGN-IN COMPONENT MOUNT DIV -->
+
                 <div id="sign-in" style="min-height:340px;display:flex;align-items:center;justify-content:center;">
                     <div style="text-align:center;color:#A6A6A6;font-size:13px;">
                         <i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px;color:#06C167;margin-bottom:10px;"></i>
@@ -160,24 +152,8 @@
             const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
                 ? LOCAL_BACKEND : RENDER_BACKEND;
 
-            // Health Check
-            async function checkHealth() {
-                const title = document.getElementById('health-title');
-                const sub = document.getElementById('health-sub');
-                try {
-                    const res = await fetch(`${API_BASE}/auth/me`);
-                    if (res.ok) {
-                        title.innerText = "🟢 FastAPI Auth Engine Live";
-                        sub.innerText = `Connected: ${API_BASE}`;
-                        return;
-                    }
-                } catch (e) {}
-                title.innerText = "🟢 Render Production FastAPI Live";
-                sub.innerText = `Connected: ${RENDER_BACKEND}`;
-            }
-            checkHealth();
-
             // Official Clerk Initialization Pattern
+
             const publishableKey = "pk_test_ZW1lcmdpbmctbXV0dC04LmNsZXJrLmFjY291bnRzLmRldiQ";
             const clerkDomain = atob(publishableKey.split('_')[2]).slice(0, -1);
 
