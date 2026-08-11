@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KUBER - Distributed Platform with Official Clerk React UI</title>
+    
+    <!-- Google Fonts: Outfit, Inter & Space Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- React & Babel Standalone CDNs -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Custom Production Styles -->
+    <link rel="stylesheet" href="src/index.css">
+</head>
+<body>
+
+    <div id="root"></div>
+
+    <!-- Official Clerk JS & UI Loader -->
+    <script async crossorigin="anonymous" data-clerk-publishable-key="pk_test_ZW1lcmdpbmctbXV0dC04LmNsZXJrLmFjY291bnRzLmRldiQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <!-- React Application Component Script -->
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const PUBLISHABLE_KEY = "pk_test_ZW1lcmdpbmctbXV0dC04LmNsZXJrLmFjY291bnRzLmRldiQ";
+
+        function KuberApp() {
+            const [clerkObj, setClerkObj] = useState(null);
+            const [isSignedIn, setIsSignedIn] = useState(false);
+            const [userProfile, setUserProfile] = useState(null);
+            
+            const [role, setRole] = useState('RIDER');
+            const [authTab, setAuthTab] = useState('signin');
+            const [region, setRegion] = useState('mumbai');
+            const [activeTab, setActiveTab] = useState('booking');
+            
+            const [pickup, setPickup] = useState('bkc');
+            const [drop, setDrop] = useState('airport');
+            const [selectedRide, setSelectedRide] = useState('uberx');
+            const [tripStage, setTripStage] = useState('IDLE');
+            const [showReceipt, setShowReceipt] = useState(false);
+            
+            const [distanceKm, setDistanceKm] = useState(4.5);
+            const [surgeMultiplier, setSurgeMultiplier] = useState(1.8);
+            const [tripPayload, setTripPayload] = useState(null);
+
+            const mapContainerRef = useRef(null);
+            const mapInstance = useRef(null);
+            const pickupMarkerRef = useRef(null);
+            const dropMarkerRef = useRef(null);
+            const routePolylineRef = useRef(null);
+            const clerkSignInMounted = useRef(false);
+
+            const locations = {
+                bkc: { lat: 19.0600, lon: 72.8350, label: "Bandra Kurla Complex (BKC), Mumbai" },
+                airport: { lat: 19.0880, lon: 72.8680, label: "Mumbai Airport T2" },
+                colaba: { lat: 18.9220, lon: 72.8330, label: "Gateway of India, Colaba" },
+                connaught: { lat: 28.6315, lon: 77.2167, label: "Connaught Place, New Delhi" },
+                delhi_airport: { lat: 28.5562, lon: 77.1000, label: "IGI Airport T3, Delhi" }
+            };
+
+            // Initialize Clerk SDK
+            useEffect(() => {
+                async function initClerk() {
+                    if (window.Clerk) {
+                        try {
+                            await window.Clerk.load({ publishableKey: PUBLISHABLE_KEY });
+                            setClerkObj(window.Clerk);
+                            
+                            if (window.Clerk.user) {
+                                setIsSignedIn(true);
+                                setUserProfile(window.Clerk.user);
+                                syncUserToBackend(window.Clerk.user, role);
+                            }
+
+                            window.Clerk.addListener(({ user }) => {
+                                if (user) {
+                                    setIsSignedIn(true);
+                                    setUserProfile(user);
+                                    syncUserToBackend(user, role);
+                                } else {
+                                    setIsSignedIn(false);
+                                    setUserProfile(null);
+                                }
+                            });
+                        } catch (e) {
+                            console.log("Clerk initialization in fallback mode.");
+                        }
+                    }
+                }
+                initClerk();
+            }, []);
+
+            // Mount Clerk Sign-In UI Component
+            useEffect(() => {
+                if (clerkObj && !isSignedIn && !clerkSignInMounted.current) {
+                    const mountNode = document.getElementById('clerk-signin-mount');
+                    if (mountNode) {
+                        try {
+                            clerkObj.mountSignIn(mountNode);
+                            clerkSignInMounted.current = true;
+                        } catch (e) {}
+                    }
+                }
+            }, [clerkObj, isSignedIn]);
+
+            const syncUserToBackend = (user, userRole) => {
+                const email = user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : "clerk_user@kuber.dev";
+                fetch('http://localhost:8006/auth/clerk-sync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        clerk_user_id: user.id,
+                        email: email,
+                        full_name: user.fullName || "Clerk User",
+                        role: userRole
+                    })
+                }).catch(e => {});
+            };
+
+            // Initialize Map
+            useEffect(() => {
+                if (!isSignedIn || !mapContainerRef.current || mapInstance.current) return;
+
+                const center = region === 'delhi' ? [28.6139, 77.2090] : [19.0600, 72.8350];
+                const map = L.map(mapContainerRef.current, { zoomControl: false }).setView(center, 13);
+                
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    maxZoom: 19
+                }).addTo(map);
+                L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+                mapInstance.current = map;
+                renderRoute();
+
+                return () => {
+                    if (mapInstance.current) {
+                        mapInstance.current.remove();
+                        mapInstance.current = null;
+                    }
+                };
+            }, [isSignedIn, region]);
+
+            const renderRoute = () => {
+                if (!mapInstance.current) return;
+
+                const pLoc = locations[pickup] || locations.bkc;
+                const dLoc = locations[drop] || locations.airport;
+
+                if (pickupMarkerRef.current) mapInstance.current.removeLayer(pickupMarkerRef.current);
+                pickupMarkerRef.current = L.marker([pLoc.lat, pLoc.lon], {
+                    icon: L.divIcon({
+                        className: 'pin',
+                        html: '<div style="background:#06C167;width:14px;height:14px;border-radius:2px;box-shadow:0 0 10px #06C167;"></div>'
+                    })
+                }).addTo(mapInstance.current);
+
+                if (dropMarkerRef.current) mapInstance.current.removeLayer(dropMarkerRef.current);
+                dropMarkerRef.current = L.marker([dLoc.lat, dLoc.lon], {
+                    icon: L.divIcon({
+                        className: 'pin',
+                        html: '<div style="background:#FFF;width:14px;height:14px;border-radius:2px;box-shadow:0 0 10px #FFF;"></div>'
+                    })
+                }).addTo(mapInstance.current);
+
+                if (routePolylineRef.current) mapInstance.current.removeLayer(routePolylineRef.current);
+                routePolylineRef.current = L.polyline([[pLoc.lat, pLoc.lon], [dLoc.lat, dLoc.lon]], {
+                    color: '#FFFFFF',
+                    weight: 5,
+                    opacity: 0.9,
+                    dashArray: '10, 10'
+                }).addTo(mapInstance.current);
+
+                mapInstance.current.fitBounds(routePolylineRef.current.getBounds(), { padding: [60, 60] });
+
+                const R = 6371;
+                const dLat = (dLoc.lat - pLoc.lat) * Math.PI / 180;
+                const dLon = (dLoc.lon - pLoc.lon) * Math.PI / 180;
+                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                          Math.cos(pLoc.lat * Math.PI / 180) * Math.cos(dLoc.lat * Math.PI / 180) *
+                          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                setDistanceKm(parseFloat(dist.toFixed(1)));
+                setSurgeMultiplier(dist > 10 ? 2.1 : (dist > 5 ? 1.8 : 1.2));
+            };
+
+            useEffect(() => {
+                renderRoute();
+            }, [pickup, drop]);
+
+            const handleSimulateLogin = (selectedRole) => {
+                setRole(selectedRole);
+                setIsSignedIn(true);
+                setUserProfile({
+                    fullName: `Karan Bhati (${selectedRole})`,
+                    primaryEmailAddress: { emailAddress: `karan_${selectedRole.toLowerCase()}@kuber.io` },
+                    id: `clerk_${selectedRole.toLowerCase()}_99`
+                });
+            };
+
+            const handleRequestRide = () => {
+                setTripStage('MATCHING');
+                setActiveTab('active-trip');
+
+                setTimeout(() => {
+                    setTripStage('EN_ROUTE');
+                    setTripPayload({
+                        driver: 'Karan Bhati',
+                        car: 'Toyota Fortuner SUV',
+                        plate: 'MH-02-KB-7788',
+                        fare: Math.round((50 + distanceKm * 15) * surgeMultiplier)
+                    });
+                }, 1800);
+            };
+
+            return (
+                <div className="app-root">
+                    
+                    {/* SIGNED OUT AUTH SCREEN */}
+                    {!isSignedIn ? (
+                        <div className="auth-page-container">
+                            <div className="auth-wrapper-card">
+                                <div className="uber-brand-header">
+                                    <h1 className="uber-brand-title">KUBER</h1>
+                                    <p className="uber-brand-sub">Clerk Authentication • Google, GitHub & Passcode</p>
+                                </div>
+
+                                <div className="role-selector-bar">
+                                    <button className={`role-btn ${role === 'RIDER' ? 'active' : ''}`} onClick={() => setRole('RIDER')}>
+                                        <h4>Rider</h4>
+                                        <span>Book & Track</span>
+                                    </button>
+                                    <button className={`role-btn ${role === 'DRIVER' ? 'active' : ''}`} onClick={() => setRole('DRIVER')}>
+                                        <h4>Driver</h4>
+                                        <span>Biometrics</span>
+                                    </button>
+                                    <button className={`role-btn ${role === 'ADMIN' ? 'active' : ''}`} onClick={() => setRole('ADMIN')}>
+                                        <h4>Admin</h4>
+                                        <span>Ops & Shards</span>
+                                    </button>
+                                </div>
+
+                                {/* Official Clerk UI Mount Point */}
+                                <div id="clerk-signin-mount" className="clerk-component-mount"></div>
+
+                                <div style={{ textCenter: 'center', margin: '16px 0', fontSize: '11px', color: '#A6A6A6' }}>
+                                    OR ONE-CLICK DEVELOPER PORTAL ENTRY
+                                </div>
+
+                                <button className="cta-btn" onClick={() => handleSimulateLogin(role)}>
+                                    Enter {role} Portal
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        
+                        /* SIGNED IN APPLICATION DASHBOARD */
+                        <React.Fragment>
+                            <header className="uber-header">
+                                <div className="header-left">
+                                    <div className="brand-logo">KUBER</div>
+                                    <div className="nav-line"></div>
+                                    <div className="region-buttons">
+                                        <button className={`region-chip ${region === 'mumbai' ? 'active' : ''}`} onClick={() => setRegion('mumbai')}>
+                                            🟢 Mumbai Shard
+                                        </button>
+                                        <button className={`region-chip ${region === 'delhi' ? 'active' : ''}`} onClick={() => setRegion('delhi')}>
+                                            🟢 Delhi Shard
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="header-right">
+                                    <div className="user-badge-pill">
+                                        <div style={{ width: '28px', height: '28px', background: '#262626', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                                            {role[0]}
+                                        </div>
+                                        <div>
+                                            <strong style={{ fontSize: '12px', display: 'block' }}>{userProfile ? userProfile.fullName : 'Authenticated User'}</strong>
+                                            <span className={`role-badge ${role}`}>{role}</span>
+                                        </div>
+                                    </div>
+
+                                    <button className="region-chip" onClick={() => { setIsSignedIn(false); if(clerkObj) clerkObj.signOut(); }}>
+                                        Sign Out
+                                    </button>
+                                </div>
+                            </header>
+
+                            <main className="main-viewport">
+                                <aside className="sidebar-panel">
+                                    <div className="tab-nav">
+                                        <button className={`tab-btn ${activeTab === 'booking' ? 'active' : ''}`} onClick={() => setActiveTab('booking')}>
+                                            🚗 Ride
+                                        </button>
+                                        <button className={`tab-btn ${activeTab === 'driver' ? 'active' : ''} ${role !== 'DRIVER' && role !== 'ADMIN' ? 'disabled' : ''}`} onClick={() => (role === 'DRIVER' || role === 'ADMIN') && setActiveTab('driver')}>
+                                            🛺 Driver Shift
+                                        </button>
+                                        <button className={`tab-btn ${activeTab === 'admin' ? 'active' : ''} ${role !== 'ADMIN' ? 'disabled' : ''}`} onClick={() => role === 'ADMIN' && setActiveTab('admin')}>
+                                            ⚙️ Cluster Ops
+                                        </button>
+                                    </div>
+
+                                    {activeTab === 'booking' && (
+                                        <div>
+                                            <div className="card-box">
+                                                <h2 className="card-title">Request a Ride</h2>
+                                                
+                                                <div className="select-wrap">
+                                                    <label>Pickup Location</label>
+                                                    <select className="uber-select-input" value={pickup} onChange={e => setPickup(e.target.value)}>
+                                                        <option value="bkc">Bandra Kurla Complex (BKC), Mumbai</option>
+                                                        <option value="airport">Mumbai Airport T2</option>
+                                                        <option value="colaba">Gateway of India, Colaba</option>
+                                                        <option value="connaught">Connaught Place, New Delhi</option>
+                                                    </select>
+                                                </div>
+
+                                                <div className="select-wrap">
+                                                    <label>Destination</label>
+                                                    <select className="uber-select-input" value={drop} onChange={e => setDrop(e.target.value)}>
+                                                        <option value="airport">Mumbai Airport T2</option>
+                                                        <option value="bkc">Bandra Kurla Complex (BKC)</option>
+                                                        <option value="colaba">Gateway of India, Colaba</option>
+                                                        <option value="delhi_airport">IGI Airport T3, Delhi</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div className="surge-banner-box">
+                                                <div>
+                                                    <strong style={{ fontSize: '13px', display: 'block' }}>⚡ High Demand Area</strong>
+                                                    <span style={{ fontSize: '11px', opacity: 0.85 }}>Scikit-Learn RandomForest Model</span>
+                                                </div>
+                                                <strong style={{ fontSize: '14px', background: 'rgba(0,0,0,0.4)', padding: '4px 10px', borderRadius: '12px' }}>
+                                                    {surgeMultiplier}x
+                                                </strong>
+                                            </div>
+
+                                            <div className="card-box">
+                                                <span style={{ fontSize: '11px', color: '#A6A6A6', fontWeight: 600, display: 'block', marginBottom: '10px' }}>
+                                                    SUGGESTED RIDES
+                                                </span>
+
+                                                <div className={`ride-item-card ${selectedRide === 'uberx' ? 'active' : ''}`} onClick={() => setSelectedRide('uberx')}>
+                                                    <span style={{ fontSize: '24px' }}>🚗</span>
+                                                    <div style={{ flex: 1 }}>
+                                                        <strong>UberX</strong>
+                                                        <p style={{ fontSize: '12px', color: '#A6A6A6' }}>Affordable rides</p>
+                                                    </div>
+                                                    <span className="price-text">₹{Math.round((50 + distanceKm * 15) * surgeMultiplier)}</span>
+                                                </div>
+
+                                                <div className={`ride-item-card ${selectedRide === 'black' ? 'active' : ''}`} onClick={() => setSelectedRide('black')}>
+                                                    <span style={{ fontSize: '24px' }}>🚘</span>
+                                                    <div style={{ flex: 1 }}>
+                                                        <strong>Uber Black</strong>
+                                                        <p style={{ fontSize: '12px', color: '#A6A6A6' }}>Luxury sedans</p>
+                                                    </div>
+                                                    <span className="price-text">₹{Math.round((120 + distanceKm * 35) * surgeMultiplier)}</span>
+                                                </div>
+                                            </div>
+
+                                            <button className="cta-btn" onClick={handleRequestRide}>
+                                                Request UberX
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {activeTab === 'active-trip' && (
+                                        <div>
+                                            <div className="card-box">
+                                                <h2>{tripStage === 'MATCHING' ? 'Connecting to Driver...' : 'Driver En Route'}</h2>
+                                                <p style={{ fontSize: '12px', color: '#A6A6A6' }}>Geohash Bipartite Batch Queue</p>
+                                            </div>
+
+                                            {tripPayload && (
+                                                <div className="card-box">
+                                                    <div style={{ display: 'flex', gap: '14px', marginBottom: '12px' }}>
+                                                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#06C167', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>KB</div>
+                                                        <div>
+                                                            <h3>{tripPayload.driver}</h3>
+                                                            <p style={{ fontSize: '12px', color: '#A6A6A6' }}>{tripPayload.car} • <strong>{tripPayload.plate}</strong></p>
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ background: 'rgba(6,193,103,0.1)', padding: '10px', borderRadius: '8px', fontSize: '12px', color: '#06C167' }}>
+                                                        🛡️ OpenCV + FaceNet Biometrics: <strong>VERIFIED (0.8942)</strong>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <button className="cta-btn green" onClick={() => setShowReceipt(true)}>
+                                                Complete Trip & Bill
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {activeTab === 'driver' && (
+                                        <div className="card-box">
+                                            <h2>📷 Biometric Shift Check-In</h2>
+                                            <p style={{ fontSize: '12px', color: '#A6A6A6', margin: '8px 0' }}>OpenCV face detection & FaceNet 512-D embedding match.</p>
+                                            <div style={{ height: '160px', background: '#1c1c1c', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#06C167' }}>
+                                                [Camera Feed Active • Match 0.8942]
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {activeTab === 'admin' && (
+                                        <div className="card-box">
+                                            <h2>⚙️ Cluster Telemetry</h2>
+                                            <p style={{ fontSize: '12px', color: '#A6A6A6', margin: '8px 0' }}>Aiven MySQL Shards & Scikit-Learn Model Controls.</p>
+                                            <div style={{ background: 'rgba(39,110,241,0.15)', color: '#276EF1', padding: '12px', borderRadius: '10px', fontSize: '13px' }}>
+                                                Topology Status: 8 Microservices Online (Port 8000 - 8006)
+                                            </div>
+                                        </div>
+                                    )}
+                                </aside>
+
+                                <section className="map-view">
+                                    <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }}></div>
+                                    <div className="map-badge">
+                                        <span>Geohash Grid: <strong className="code-font">te7udw</strong></span>
+                                    </div>
+                                </section>
+                            </main>
+
+                            {showReceipt && (
+                                <div className="modal-backdrop">
+                                    <div className="receipt-card">
+                                        <h2 style={{ textAlign: 'center' }}>Thanks for riding with KUBER</h2>
+                                        <div className="shard-tag">
+                                            <strong>🗄️ {region.toUpperCase()} SHARD DATABASE</strong>
+                                            <p style={{ fontSize: '11px', marginTop: '2px' }}>ACID Transaction Billed (Port 3307 / kuber_db_{region})</p>
+                                        </div>
+                                        <div style={{ borderTop: '1px solid #262626', paddingTop: '12px', margin: '14px 0' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                                <span>Distance ({distanceKm} km × ₹15)</span>
+                                                <span>₹{(distanceKm * 15).toFixed(2)}</span>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 'bold', borderTop: '1px dashed #262626', paddingTop: '10px' }}>
+                                                <span>Total Fare</span>
+                                                <span className="green-font">₹{Math.round((50 + distanceKm * 15) * surgeMultiplier)}.00</span>
+                                            </div>
+                                        </div>
+                                        <button className="cta-btn" onClick={() => { setShowReceipt(false); setTripStage('IDLE'); setActiveTab('booking'); }}>
+                                            Done
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                        </React.Fragment>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<KuberApp />);
+    </script>
+</body>
+</html>

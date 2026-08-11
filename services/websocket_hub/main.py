@@ -5,9 +5,19 @@ import logging
 logging.basicConfig(level = logging.INFO)
 logger = logging.getLogger(__name__)
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title = "KUBER WebSocket Hub",
     description = "Streams real-time GPS coordinates to the rider's app"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 class ConnectionManager:
