@@ -167,11 +167,17 @@
                     <div id="view-rider-panel">
                         <div id="booking-request-card">
                             <div class="card-box">
-                                <h2 class="card-title">Request a Ride</h2>
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                                    <h2 class="card-title" style="margin-bottom:0;">Request a Ride</h2>
+                                    <button id="btn-use-my-location" class="region-chip" style="background:rgba(6,193,103,0.15);color:#06C167;border-color:#06C167;">
+                                        <i class="fa-solid fa-location-crosshairs"></i> Use My GPS Location
+                                    </button>
+                                </div>
                                 
                                 <div class="select-wrap">
                                     <label>Pickup Location</label>
                                     <select id="select-pickup" class="uber-select-input">
+                                        <option value="current_gps">📍 My Current GPS Location</option>
                                         <option value="bkc">Bandra Kurla Complex (BKC), Mumbai</option>
                                         <option value="airport">Mumbai Airport T2</option>
                                         <option value="colaba">Gateway of India, Colaba</option>
@@ -328,7 +334,7 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
-    <!-- PURE VECTOR-RENDERED ENGINE -->
+    <!-- REAL-TIME GEOLOCATION & FLEET ENGINE -->
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const RENDER_BACKEND = "https://kuber-tjn2.onrender.com";
@@ -341,6 +347,7 @@
 
             let selectedRole = "rider";
             let activeCity = "mumbai";
+            let userPickupMarker = null;
 
             const authViewport = document.getElementById('auth-viewport');
             const dashboardViewport = document.getElementById('dashboard-viewport');
@@ -610,10 +617,49 @@
                 } catch(e) {}
             }
 
+            // HTML5 Real-Time Geolocation GPS Locator
+            document.getElementById('btn-use-my-location').addEventListener('click', () => {
+                if (!navigator.geolocation) {
+                    alert("Geolocation is not supported by your browser.");
+                    return;
+                }
+
+                alert("⌛ Accessing GPS Location...");
+
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const userLat = position.coords.latitude;
+                        const userLon = position.coords.longitude;
+
+                        if (map) {
+                            map.flyTo([userLat, userLon], 15);
+
+                            if (userPickupMarker) map.removeLayer(userPickupMarker);
+
+                            // Drop Glowing Blue Pickup Pin
+                            userPickupMarker = L.marker([userLat, userLon], {
+                                icon: L.divIcon({
+                                    className: 'user-pickup-pin',
+                                    html: '<div style="background:#4361EE;color:#FFF;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;box-shadow:0 0 20px #4361EE;border:2px solid #FFF;"><i class="fa-solid fa-location-dot" style="font-size:16px;"></i></div>'
+                                })
+                            }).addTo(map);
+
+                            userPickupMarker.bindPopup("<b>📍 Your Current Pickup Location</b><br>Rider GPS: Active").openPopup();
+
+                            // Spawn driver fleet right around rider's real GPS position!
+                            spawnDriverFleet([userLat, userLon]);
+                        }
+                    },
+                    (error) => {
+                        alert("❌ Geolocation Permission Denied or Unavailable.");
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            });
+
             // Live Driver Fleet Generator & Telemetry Simulator
             function spawnDriverFleet(centerCoords) {
-                // Clear existing driver markers
-                driverFleetMarkers.forEach(m => map.removeLayer(m));
+                driverFleetMarkers.forEach(m => map.removeLayer(m.marker));
                 driverFleetMarkers = [];
 
                 for (let i = 0; i < 25; i++) {
@@ -633,7 +679,6 @@
                     driverFleetMarkers.push({ marker, lat, lon });
                 }
 
-                // Move drivers smoothly every 1.5 seconds
                 setInterval(() => {
                     driverFleetMarkers.forEach(d => {
                         d.lat += (Math.random() - 0.5) * 0.0008;
@@ -643,7 +688,7 @@
                 }, 1500);
             }
 
-            // City Focus Switcher & Fleet Repositioner
+            // City Focus Switcher
             document.querySelectorAll('[data-city]').forEach(chip => {
                 chip.addEventListener('click', () => {
                     document.querySelectorAll('[data-city]').forEach(c => c.classList.remove('active'));
@@ -655,7 +700,6 @@
                     }
                 });
             });
-
 
             // 1. RIDER PERSPECTIVE: REQUEST RIDE
             document.getElementById('btn-request-ride').addEventListener('click', () => {
