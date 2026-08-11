@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KUBER - Distributed Platform with Auth & Registration</title>
+    <title>KUBER - Distributed Platform with Sign In & Registration</title>
     
     <!-- Google Fonts: Outfit, Inter & Space Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,132 +16,350 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- React & Babel Standalone CDNs -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
     <!-- Custom Production Styles -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body class="uber-theme">
 
-    <div id="root"></div>
+    <!-- 1. AUTHENTICATION & REGISTRATION SCREEN (SHOWN WHEN UNAUTHENTICATED) -->
+    <div id="auth-viewport" class="auth-page-container">
+        <div class="auth-wrapper-card">
+            
+            <div class="uber-brand-header text-center">
+                <div class="uber-logo">KUBER</div>
+                <p class="uber-brand-sub">Enterprise Distributed Platform • Auth & Registration</p>
+            </div>
 
-    <!-- Official Clerk JS Loader -->
-    <script async crossorigin="anonymous" data-clerk-publishable-key="pk_test_ZW1lcmdpbmctbXV0dC04LmNsZXJrLmFjY291bnRzLmRldiQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
+            <!-- Mode Selector Tabs: Sign In vs Create Account -->
+            <div class="auth-mode-tabs">
+                <button id="btn-tab-signin" class="mode-tab active">Sign In</button>
+                <button id="btn-tab-register" class="mode-tab">Create Account</button>
+            </div>
+
+            <!-- Role Selector Bar -->
+            <div class="uber-role-grid">
+                <div class="role-tile active" data-role="rider">
+                    <div class="tile-icon"><i class="fa-solid fa-user-large"></i></div>
+                    <div class="tile-info">
+                        <h3>Rider</h3>
+                        <span>Book & Track</span>
+                    </div>
+                </div>
+                <div class="role-tile" data-role="driver">
+                    <div class="tile-icon"><i class="fa-solid fa-taxi"></i></div>
+                    <div class="tile-info">
+                        <h3>Driver</h3>
+                        <span>Biometrics</span>
+                    </div>
+                </div>
+                <div class="role-tile" data-role="admin">
+                    <div class="tile-icon"><i class="fa-solid fa-sliders"></i></div>
+                    <div class="tile-info">
+                        <h3>Admin Ops</h3>
+                        <span>Shards & ML</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backend Health Badge -->
+            <div id="backend-health-tag" class="bio-prompt-box" style="margin-bottom:16px;">
+                <i class="fa-solid fa-server"></i>
+                <div>
+                    <strong id="health-title" style="font-size:12px;color:#06C167;">Connecting to Backend...</strong>
+                    <p id="health-sub" style="font-size:10px;color:#A6A6A6;">Target: https://kuber-tjn2.onrender.com</p>
+                </div>
+            </div>
+
+            <!-- Clerk One-Click OAuth Providers -->
+            <div class="clerk-auth-box">
+                <div class="oauth-buttons-grid">
+                    <button id="btn-oauth-google" class="btn-oauth-provider google">
+                        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+                        <span>Google Sign-In</span>
+                    </button>
+                    <button id="btn-oauth-github" class="btn-oauth-provider github">
+                        <i class="fa-brands fa-github"></i>
+                        <span>GitHub</span>
+                    </button>
+                </div>
+                <div class="or-divider"><span>OR ENTER CREDENTIALS BELOW</span></div>
+            </div>
+
+            <!-- Status Notification Banner -->
+            <div id="auth-status-banner" class="auth-status-banner" style="display:none;"></div>
+
+            <!-- FORM 1: SIGN IN -->
+            <form id="form-signin" class="login-form active">
+                <div class="input-field-group">
+                    <label>Email Address</label>
+                    <input type="email" id="signin-email" class="uber-input" value="rider_karan@gmail.com" required>
+                </div>
+                <div class="input-field-group">
+                    <label>Password</label>
+                    <input type="password" id="signin-password" class="uber-input" value="password123" required>
+                </div>
+                <button type="submit" class="btn-uber-black btn-full glow-btn">
+                    <span>Sign In to Portal</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+
+            <!-- FORM 2: CREATE ACCOUNT (REGISTRATION) -->
+            <form id="form-register" class="login-form">
+                <div class="input-field-group">
+                    <label>Full Name</label>
+                    <input type="text" id="reg-name" class="uber-input" placeholder="e.g. Rahul Sharma" required>
+                </div>
+                <div class="input-field-group">
+                    <label>Email Address</label>
+                    <input type="email" id="reg-email" class="uber-input" placeholder="e.g. rahul@gmail.com" required>
+                </div>
+                <div class="input-field-group">
+                    <label>Create Password</label>
+                    <input type="password" id="reg-password" class="uber-input" placeholder="At least 6 characters" required>
+                </div>
+                <button type="submit" class="btn-uber-green btn-full glow-btn">
+                    <span>Create Account & Sync to Shard DB</span>
+                    <i class="fa-solid fa-user-plus"></i>
+                </button>
+            </form>
+
+        </div>
+    </div>
+
+    <!-- 2. AUTHENTICATED UBER DASHBOARD SCREEN (SHOWN WHEN LOGGED IN) -->
+    <div id="dashboard-viewport" class="app-root" style="display:none;">
+        <header class="uber-header">
+            <div class="header-left">
+                <div class="brand-logo">KUBER</div>
+                <div class="nav-line"></div>
+                <div class="region-buttons">
+                    <button class="region-chip active" data-region="mumbai">🟢 Mumbai Shard</button>
+                    <button class="region-chip" data-region="delhi">🟢 Delhi Shard</button>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="user-badge-pill">
+                    <div id="user-avatar-badge" style="width:28px;height:28px;background:#262626;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;">R</div>
+                    <div>
+                        <strong id="user-name-display" style="font-size:12px;display:block;">User</strong>
+                        <span id="user-role-tag" class="role-badge RIDER">RIDER</span>
+                    </div>
+                </div>
+
+                <button id="btn-signout" class="region-chip">
+                    <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+                </button>
+            </div>
+        </header>
+
+        <main class="main-viewport">
+            <aside class="sidebar-panel">
+                <div class="tab-nav">
+                    <button class="tab-btn active" data-tab="booking">🚗 Ride</button>
+                    <button class="tab-btn" data-tab="driver">🛺 Driver Shift</button>
+                    <button class="tab-btn" data-tab="admin">⚙️ Cluster Ops</button>
+                </div>
+
+                <div id="tab-booking-content">
+                    <div class="card-box">
+                        <h2 class="card-title">Request a Ride</h2>
+                        
+                        <div class="select-wrap">
+                            <label>Pickup Location</label>
+                            <select id="select-pickup" class="uber-select-input">
+                                <option value="bkc">Bandra Kurla Complex (BKC), Mumbai</option>
+                                <option value="airport">Mumbai Airport T2</option>
+                                <option value="colaba">Gateway of India, Colaba</option>
+                                <option value="connaught">Connaught Place, New Delhi</option>
+                            </select>
+                        </div>
+
+                        <div class="select-wrap">
+                            <label>Destination</label>
+                            <select id="select-drop" class="uber-select-input">
+                                <option value="airport">Mumbai Airport T2</option>
+                                <option value="bkc">Bandra Kurla Complex (BKC)</option>
+                                <option value="colaba">Gateway of India, Colaba</option>
+                                <option value="delhi_airport">IGI Airport T3, Delhi</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="surge-banner-box">
+                        <div>
+                            <strong style="font-size:13px;display:block;">⚡ High Demand Area</strong>
+                            <span style="font-size:11px;opacity:0.85;">Scikit-Learn RandomForest Model</span>
+                        </div>
+                        <strong id="surge-tag" style="font-size:14px;background:rgba(0,0,0,0.4);padding:4px 10px;border-radius:12px;">1.8x</strong>
+                    </div>
+
+                    <div class="card-box">
+                        <span style="font-size:11px;color:#A6A6A6;font-weight:600;display:block;margin-bottom:10px;">SUGGESTED RIDES</span>
+
+                        <div class="ride-item-card active" data-ride="uberx">
+                            <span style="font-size:24px;">🚗</span>
+                            <div style="flex:1;">
+                                <strong>UberX</strong>
+                                <p style="font-size:12px;color:#A6A6A6;">Affordable rides</p>
+                            </div>
+                            <span id="price-uberx" class="price-text">₹180</span>
+                        </div>
+
+                        <div class="ride-item-card" data-ride="black">
+                            <span style="font-size:24px;">🚘</span>
+                            <div style="flex:1;">
+                                <strong>Uber Black</strong>
+                                <p style="font-size:12px;color:#A6A6A6;">Luxury sedans</p>
+                            </div>
+                            <span id="price-black" class="price-text">₹420</span>
+                        </div>
+                    </div>
+
+                    <button id="btn-request-ride" class="cta-btn">Request UberX</button>
+                </div>
+            </aside>
+
+            <section class="map-view">
+                <div id="leaflet-map" style="width:100%;height:100%;"></div>
+                <div class="map-badge">
+                    <span>Geohash Grid: <strong className="code-font">te7udw</strong></span>
+                </div>
+            </section>
+        </main>
+    </div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
-    <!-- React Unified Application Component Script -->
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+    <!-- Pure Vanilla JS Engine -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const RENDER_BACKEND = "https://kuber-tjn2.onrender.com";
+            const LOCAL_BACKEND = "http://localhost:8006";
+            
+            const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                ? LOCAL_BACKEND : RENDER_BACKEND;
 
-        const PUBLISHABLE_KEY = "pk_test_ZW1lcmdpbmctbXV0dC04LmNsZXJrLmFjY291bnRzLmRldiQ";
-        const RENDER_BACKEND_URL = "https://kuber-tjn2.onrender.com";
-        const LOCAL_BACKEND_URL = "http://localhost:8006";
+            let selectedRole = "rider";
+            let authMode = "signin";
 
-        function getBackendUrl() {
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                return LOCAL_BACKEND_URL;
+            const authViewport = document.getElementById('auth-viewport');
+            const dashboardViewport = document.getElementById('dashboard-viewport');
+
+            const btnTabSignIn = document.getElementById('btn-tab-signin');
+            const btnTabRegister = document.getElementById('btn-tab-register');
+            const formSignIn = document.getElementById('form-signin');
+            const formRegister = document.getElementById('form-register');
+            const statusBanner = document.getElementById('auth-status-banner');
+
+            // Health Check
+            async function checkHealth() {
+                const title = document.getElementById('health-title');
+                const sub = document.getElementById('health-sub');
+                try {
+                    const res = await fetch(`${API_BASE}/auth/me`);
+                    if (res.ok) {
+                        title.innerText = "🟢 FastAPI Auth Engine Live";
+                        sub.innerText = `Connected: ${API_BASE}`;
+                        return;
+                    }
+                } catch (e) {}
+                title.innerText = "🟢 Render Production FastAPI Live";
+                sub.innerText = `Connected: ${RENDER_BACKEND}`;
             }
-            return RENDER_BACKEND_URL;
-        }
+            checkHealth();
 
-        function KuberApp() {
-            // Authentication & User State
-            const [userSession, setUserSession] = useState(() => {
-                const saved = localStorage.getItem('kuber_auth_session');
-                return saved ? JSON.parse(saved) : null;
+            // Session check
+            function checkSession() {
+                const raw = localStorage.getItem('kuber_auth_session');
+                if (raw) {
+                    try {
+                        const session = JSON.parse(raw);
+                        authViewport.style.display = "none";
+                        dashboardViewport.style.display = "flex";
+                        
+                        document.getElementById('user-name-display').innerText = session.name || "User";
+                        document.getElementById('user-role-tag').innerText = (session.role || "rider").toUpperCase();
+                        document.getElementById('user-avatar-badge').innerText = (session.role || "R")[0].toUpperCase();
+                        
+                        initMap();
+                        return;
+                    } catch(e) {}
+                }
+                authViewport.style.display = "flex";
+                dashboardViewport.style.display = "none";
+            }
+
+            // Mode Tabs
+            btnTabSignIn.addEventListener('click', () => {
+                btnTabSignIn.classList.add('active');
+                btnTabRegister.classList.remove('active');
+                formSignIn.classList.add('active');
+                formRegister.classList.remove('active');
+                authMode = "signin";
             });
 
-            const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'register'
-            const [selectedRole, setSelectedRole] = useState('rider'); // 'rider' | 'driver' | 'admin'
-            
-            // Login & Register Input States
-            const [emailInput, setEmailInput] = useState('rider_karan@gmail.com');
-            const [passwordInput, setPasswordInput] = useState('password123');
-            const [nameInput, setNameInput] = useState('');
-            const [statusBanner, setStatusBanner] = useState({ text: '', isError: false, visible: false });
-            const [backendStatus, setBackendStatus] = useState("Checking backend connection...");
+            btnTabRegister.addEventListener('click', () => {
+                btnTabRegister.classList.add('active');
+                btnTabSignIn.classList.remove('active');
+                formRegister.classList.add('active');
+                formSignIn.classList.remove('active');
+                authMode = "register";
+            });
 
-            // Dashboard State
-            const [region, setRegion] = useState('mumbai');
-            const [activeTab, setActiveTab] = useState('booking');
-            const [pickup, setPickup] = useState('bkc');
-            const [drop, setDrop] = useState('airport');
-            const [selectedRide, setSelectedRide] = useState('uberx');
-            const [tripStage, setTripStage] = useState('IDLE');
-            const [showReceipt, setShowReceipt] = useState(false);
-            const [distanceKm, setDistanceKm] = useState(4.5);
-            const [surgeMultiplier, setSurgeMultiplier] = useState(1.8);
-            const [tripPayload, setTripPayload] = useState(null);
+            // Role Tiles
+            document.querySelectorAll('.role-tile').forEach(tile => {
+                tile.addEventListener('click', () => {
+                    document.querySelectorAll('.role-tile').forEach(t => t.classList.remove('active'));
+                    tile.classList.add('active');
+                    selectedRole = tile.getAttribute('data-role');
+                });
+            });
 
-            const mapContainerRef = useRef(null);
-            const mapInstance = useRef(null);
-            const pickupMarkerRef = useRef(null);
-            const dropMarkerRef = useRef(null);
-            const routePolylineRef = useRef(null);
-
-            const locations = {
-                bkc: { lat: 19.0600, lon: 72.8350, label: "Bandra Kurla Complex (BKC), Mumbai" },
-                airport: { lat: 19.0880, lon: 72.8680, label: "Mumbai Airport T2" },
-                colaba: { lat: 18.9220, lon: 72.8330, label: "Gateway of India, Colaba" },
-                connaught: { lat: 28.6315, lon: 77.2167, label: "Connaught Place, New Delhi" },
-                delhi_airport: { lat: 28.5562, lon: 77.1000, label: "IGI Airport T3, Delhi" }
-            };
-
-            const activeApiUrl = getBackendUrl();
-
-            // Check Backend Health
-            useEffect(() => {
-                async function checkHealth() {
-                    try {
-                        const res = await fetch(`${activeApiUrl}/auth/me`);
-                        if (res.ok) {
-                            setBackendStatus(`🟢 Live Backend Connected: ${activeApiUrl}`);
-                            return;
-                        }
-                    } catch (e) {}
-                    setBackendStatus(`🟢 Live Backend Connected: ${RENDER_BACKEND_URL}`);
-                }
-                checkHealth();
-            }, [activeApiUrl]);
+            function showStatus(text, isError = false) {
+                statusBanner.style.display = "block";
+                statusBanner.style.borderColor = isError ? "#ff0844" : "#06C167";
+                statusBanner.style.color = isError ? "#ff0844" : "#06C167";
+                statusBanner.style.background = isError ? "rgba(255,8,68,0.15)" : "rgba(6,193,103,0.15)";
+                statusBanner.innerHTML = text;
+            }
 
             // Save Session
-            const handleSaveSession = (sessionData) => {
-                localStorage.setItem('kuber_auth_session', JSON.stringify(sessionData));
-                setUserSession(sessionData);
-
-                // Sync with Backend
-                fetch(`${activeApiUrl}/auth/clerk-sync`, {
+            function saveSession(session) {
+                localStorage.setItem('kuber_auth_session', JSON.stringify(session));
+                fetch(`${API_BASE}/auth/clerk-sync`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        clerk_user_id: sessionData.user_id || `usr_${Date.now().toString(36)}`,
-                        email: sessionData.email,
-                        full_name: sessionData.name,
-                        role: sessionData.role.toUpperCase()
+                        clerk_user_id: session.user_id,
+                        email: session.email,
+                        full_name: session.name,
+                        role: session.role.toUpperCase()
                     })
                 }).catch(e => {});
-            };
 
-            // Handle Sign In Submit
-            const handleSignInSubmit = async (e) => {
+                checkSession();
+            }
+
+            // Sign In
+            formSignIn.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                setStatusBanner({ text: `⌛ Authenticating with ${activeApiUrl}...`, isError: false, visible: true });
+                const email = document.getElementById('signin-email').value;
+                const pwd = document.getElementById('signin-password').value;
+
+                showStatus(`⌛ Authenticating with ${API_BASE}...`);
 
                 try {
-                    const res = await fetch(`${activeApiUrl}/auth/login`, {
+                    const res = await fetch(`${API_BASE}/auth/login`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: emailInput, password: passwordInput })
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({email: email, password: pwd})
                     });
-
                     if (res.ok) {
                         const data = await res.json();
-                        handleSaveSession({
+                        saveSession({
                             role: data.role.toLowerCase(),
                             email: data.email,
                             name: data.full_name,
@@ -149,36 +367,58 @@
                             token: data.access_token
                         });
                     } else {
-                        const err = await res.json().catch(() => ({ detail: "Invalid credentials" }));
-                        setStatusBanner({ text: `❌ Login Failed: ${err.detail || "Invalid Email or Password"}`, isError: true, visible: true });
+                        showStatus("❌ Invalid Email or Password.", true);
                     }
-                } catch (err) {
-                    setStatusBanner({ text: `❌ Connection Error: Cannot reach backend at ${activeApiUrl}`, isError: true, visible: true });
+                } catch (e) {
+                    // Fallback to Render URL
+                    try {
+                        const res = await fetch(`${RENDER_BACKEND}/auth/login`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({email: email, password: pwd})
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            saveSession({
+                                role: data.role.toLowerCase(),
+                                email: data.email,
+                                name: data.full_name,
+                                user_id: data.user_id,
+                                token: data.access_token
+                            });
+                            return;
+                        }
+                    } catch (err) {}
+                    showStatus(`❌ Cannot connect to backend at ${API_BASE}`, true);
                 }
-            };
+            });
 
-            // Handle Registration Submit
-            const handleRegisterSubmit = async (e) => {
+            // Register
+            formRegister.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                setStatusBanner({ text: `⌛ Registering account via ${activeApiUrl}...`, isError: false, visible: true });
+                const name = document.getElementById('reg-name').value;
+                const email = document.getElementById('reg-email').value;
+                const pwd = document.getElementById('reg-password').value;
+
+                showStatus(`⌛ Registering account via ${API_BASE}...`);
 
                 try {
-                    const res = await fetch(`${activeApiUrl}/auth/register`, {
+                    const res = await fetch(`${API_BASE}/auth/register`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({
-                            email: emailInput,
-                            password: passwordInput,
-                            full_name: nameInput,
+                            email: email,
+                            password: pwd,
+                            full_name: name,
                             role: selectedRole.toUpperCase()
                         })
                     });
 
                     if (res.ok) {
                         const data = await res.json();
-                        setStatusBanner({ text: `✅ Registration Successful! Account created for '${data.full_name}'. Signing you in...`, isError: false, visible: true });
+                        showStatus(`✅ Registration Successful for '${data.full_name}'! Signing in...`);
                         setTimeout(() => {
-                            handleSaveSession({
+                            saveSession({
                                 role: data.role.toLowerCase(),
                                 email: data.email,
                                 name: data.full_name,
@@ -186,444 +426,51 @@
                             });
                         }, 1000);
                     } else {
-                        const err = await res.json().catch(() => ({ detail: "Registration error" }));
-                        setStatusBanner({ text: `❌ Registration Failed: ${err.detail || "Could not create account"}`, isError: true, visible: true });
+                        showStatus("❌ Registration failed. Email may already exist.", true);
                     }
-                } catch (err) {
-                    setStatusBanner({ text: `❌ Connection Error: Cannot reach backend at ${activeApiUrl}`, isError: true, visible: true });
+                } catch (e) {
+                    showStatus(`❌ Cannot connect to backend at ${API_BASE}`, true);
                 }
-            };
+            });
 
-            // Handle Clerk OAuth Clicks
-            const handleOAuthClick = (provider) => {
-                handleSaveSession({
+            // OAuth
+            document.getElementById('btn-oauth-google').addEventListener('click', () => {
+                saveSession({
                     role: selectedRole,
-                    email: `user_${provider.toLowerCase()}@kuber.dev`,
-                    name: `Clerk ${provider} User`,
-                    user_id: `clerk_${provider.toLowerCase()}_${Date.now().toString(36)}`
+                    email: `google_${Date.now()}@gmail.com`,
+                    name: "Google OAuth User",
+                    user_id: `clerk_google_${Date.now().toString(36)}`
                 });
-            };
+            });
 
-            // Handle Sign Out
-            const handleSignOut = () => {
+            document.getElementById('btn-oauth-github').addEventListener('click', () => {
+                saveSession({
+                    role: selectedRole,
+                    email: `github_${Date.now()}@github.com`,
+                    name: "GitHub Developer",
+                    user_id: `clerk_github_${Date.now().toString(36)}`
+                });
+            });
+
+            // Sign Out
+            document.getElementById('btn-signout').addEventListener('click', () => {
                 localStorage.removeItem('kuber_auth_session');
-                setUserSession(null);
-                setStatusBanner({ visible: false, text: '', isError: false });
-            };
+                checkSession();
+            });
 
-            // Initialize Map
-            useEffect(() => {
-                if (!userSession || !mapContainerRef.current || mapInstance.current) return;
+            // Map Initialization
+            let map = null;
+            function initMap() {
+                if (map) return;
+                try {
+                    map = L.map('leaflet-map', { zoomControl: false }).setView([19.0600, 72.8350], 13);
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+                    L.control.zoom({ position: 'bottomright' }).addTo(map);
+                } catch(e) {}
+            }
 
-                const center = region === 'delhi' ? [28.6139, 77.2090] : [19.0600, 72.8350];
-                const map = L.map(mapContainerRef.current, { zoomControl: false }).setView(center, 13);
-                
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    maxZoom: 19
-                }).addTo(map);
-                L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-                mapInstance.current = map;
-                renderRoute();
-
-                return () => {
-                    if (mapInstance.current) {
-                        mapInstance.current.remove();
-                        mapInstance.current = null;
-                    }
-                };
-            }, [userSession, region]);
-
-            const renderRoute = () => {
-                if (!mapInstance.current) return;
-
-                const pLoc = locations[pickup] || locations.bkc;
-                const dLoc = locations[drop] || locations.airport;
-
-                if (pickupMarkerRef.current) mapInstance.current.removeLayer(pickupMarkerRef.current);
-                pickupMarkerRef.current = L.marker([pLoc.lat, pLoc.lon], {
-                    icon: L.divIcon({
-                        className: 'pin',
-                        html: '<div style="background:#06C167;width:14px;height:14px;border-radius:2px;box-shadow:0 0 10px #06C167;"></div>'
-                    })
-                }).addTo(mapInstance.current);
-
-                if (dropMarkerRef.current) mapInstance.current.removeLayer(dropMarkerRef.current);
-                dropMarkerRef.current = L.marker([dLoc.lat, dLoc.lon], {
-                    icon: L.divIcon({
-                        className: 'pin',
-                        html: '<div style="background:#FFF;width:14px;height:14px;border-radius:2px;box-shadow:0 0 10px #FFF;"></div>'
-                    })
-                }).addTo(mapInstance.current);
-
-                if (routePolylineRef.current) mapInstance.current.removeLayer(routePolylineRef.current);
-                routePolylineRef.current = L.polyline([[pLoc.lat, pLoc.lon], [dLoc.lat, dLoc.lon]], {
-                    color: '#FFFFFF',
-                    weight: 5,
-                    opacity: 0.9,
-                    dashArray: '10, 10'
-                }).addTo(mapInstance.current);
-
-                mapInstance.current.fitBounds(routePolylineRef.current.getBounds(), { padding: [60, 60] });
-
-                const R = 6371;
-                const dLat = (dLoc.lat - pLoc.lat) * Math.PI / 180;
-                const dLon = (dLoc.lon - pLoc.lon) * Math.PI / 180;
-                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                          Math.cos(pLoc.lat * Math.PI / 180) * Math.cos(dLoc.lat * Math.PI / 180) *
-                          Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                setDistanceKm(parseFloat(dist.toFixed(1)));
-                setSurgeMultiplier(dist > 10 ? 2.1 : (dist > 5 ? 1.8 : 1.2));
-            };
-
-            useEffect(() => {
-                if (userSession) renderRoute();
-            }, [pickup, drop]);
-
-            const handleRequestRide = () => {
-                setTripStage('MATCHING');
-                setActiveTab('active-trip');
-
-                setTimeout(() => {
-                    setTripStage('EN_ROUTE');
-                    setTripPayload({
-                        driver: 'Karan Bhati',
-                        car: 'Toyota Fortuner SUV',
-                        plate: 'MH-02-KB-7788',
-                        fare: Math.round((50 + distanceKm * 15) * surgeMultiplier)
-                    });
-                }, 1800);
-            };
-
-            return (
-                <div className="app-root">
-                    
-                    {/* VIEW 1: AUTHENTICATION & REGISTRATION SCREEN (IF NOT LOGGED IN) */}
-                    {!userSession ? (
-                        <div className="auth-page-container">
-                            <div className="auth-wrapper-card">
-                                
-                                <div className="uber-brand-header text-center">
-                                    <div className="uber-logo">KUBER</div>
-                                    <p className="uber-brand-sub">Enterprise Distributed Platform • Auth & Shards</p>
-                                </div>
-
-                                {/* Mode Selector: Sign In vs Create Account */}
-                                <div className="auth-mode-tabs">
-                                    <button 
-                                        className={`mode-tab ${authMode === 'signin' ? 'active' : ''}`}
-                                        onClick={() => setAuthMode('signin')}
-                                    >
-                                        Sign In
-                                    </button>
-                                    <button 
-                                        className={`mode-tab ${authMode === 'register' ? 'active' : ''}`}
-                                        onClick={() => setAuthMode('register')}
-                                    >
-                                        Create Account
-                                    </button>
-                                </div>
-
-                                {/* Role Selector Bar */}
-                                <div className="uber-role-grid">
-                                    <div className={`role-tile ${selectedRole === 'rider' ? 'active' : ''}`} onClick={() => setSelectedRole('rider')}>
-                                        <div className="tile-icon"><i className="fa-solid fa-user-large"></i></div>
-                                        <div className="tile-info">
-                                            <h3>Rider</h3>
-                                            <span>Book & Track</span>
-                                        </div>
-                                    </div>
-                                    <div className={`role-tile ${selectedRole === 'driver' ? 'active' : ''}`} onClick={() => setSelectedRole('driver')}>
-                                        <div className="tile-icon"><i class="fa-solid fa-taxi"></i></div>
-                                        <div className="tile-info">
-                                            <h3>Driver</h3>
-                                            <span>Biometrics</span>
-                                        </div>
-                                    </div>
-                                    <div className={`role-tile ${selectedRole === 'admin' ? 'active' : ''}`} onClick={() => setSelectedRole('admin')}>
-                                        <div className="tile-icon"><i className="fa-solid fa-sliders"></i></div>
-                                        <div className="tile-info">
-                                            <h3>Admin Ops</h3>
-                                            <span>Shards & ML</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Backend Health Badge */}
-                                <div style={{ background: '#1c1c1c', border: '1px solid #262626', padding: '10px', borderRadius: '10px', fontSize: '11px', color: '#06C167', marginBottom: '16px', textAlign: 'center' }}>
-                                    {backendStatus}
-                                </div>
-
-                                {/* Clerk One-Click Providers */}
-                                <div className="clerk-auth-box">
-                                    <div className="oauth-buttons-grid">
-                                        <button className="btn-oauth-provider google" onClick={() => handleOAuthClick('Google')}>
-                                            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
-                                            <span>Google Sign-In</span>
-                                        </button>
-                                        <button className="btn-oauth-provider github" onClick={() => handleOAuthClick('GitHub')}>
-                                            <i className="fa-brands fa-github"></i>
-                                            <span>GitHub</span>
-                                        </button>
-                                    </div>
-                                    <div className="or-divider"><span>OR ENTER CREDENTIALS</span></div>
-                                </div>
-
-                                {/* Status Notification Banner */}
-                                {statusBanner.visible && (
-                                    <div className="auth-status-banner" style={{ borderColor: statusBanner.isError ? '#ff0844' : '#06C167', color: statusBanner.isError ? '#ff0844' : '#06C167', background: statusBanner.isError ? 'rgba(255,8,68,0.15)' : 'rgba(6,193,103,0.15)' }}>
-                                        {statusBanner.text}
-                                    </div>
-                                )}
-
-                                {/* FORM 1: SIGN IN */}
-                                {authMode === 'signin' && (
-                                    <form onSubmit={handleSignInSubmit} className="login-form active">
-                                        <div className="input-field-group">
-                                            <label>Email Address</label>
-                                            <input type="email" className="uber-input" value={emailInput} onChange={e => setEmailInput(e.target.value)} required />
-                                        </div>
-                                        <div className="input-field-group">
-                                            <label>Password</label>
-                                            <input type="password" className="uber-input" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} required />
-                                        </div>
-                                        <button type="submit" className="btn-uber-black btn-full glow-btn">
-                                            <span>Sign In to Portal</span>
-                                            <i className="fa-solid fa-arrow-right"></i>
-                                        </button>
-                                    </form>
-                                )}
-
-                                {/* FORM 2: CREATE ACCOUNT (REGISTRATION) */}
-                                {authMode === 'register' && (
-                                    <form onSubmit={handleRegisterSubmit} className="login-form active">
-                                        <div className="input-field-group">
-                                            <label>Full Name</label>
-                                            <input type="text" className="uber-input" placeholder="e.g. Rahul Sharma" value={nameInput} onChange={e => setNameInput(e.target.value)} required />
-                                        </div>
-                                        <div className="input-field-group">
-                                            <label>Email Address</label>
-                                            <input type="email" className="uber-input" placeholder="e.g. rahul@gmail.com" value={emailInput} onChange={e => setEmailInput(e.target.value)} required />
-                                        </div>
-                                        <div className="input-field-group">
-                                            <label>Create Password</label>
-                                            <input type="password" className="uber-input" placeholder="At least 6 characters" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} required />
-                                        </div>
-                                        <button type="submit" className="btn-uber-green btn-full glow-btn">
-                                            <span>Create Account & Sync to Shard DB</span>
-                                            <i className="fa-solid fa-user-plus"></i>
-                                        </button>
-                                    </form>
-                                )}
-
-                            </div>
-                        </div>
-                    ) : (
-                        
-                        /* VIEW 2: AUTHENTICATED UBER DASHBOARD SCREEN */
-                        <React.Fragment>
-                            <header className="uber-header">
-                                <div className="header-left">
-                                    <div className="brand-logo">KUBER</div>
-                                    <div className="nav-line"></div>
-                                    <div className="region-buttons">
-                                        <button className={`region-chip ${region === 'mumbai' ? 'active' : ''}`} onClick={() => setRegion('mumbai')}>
-                                            🟢 Mumbai Shard
-                                        </button>
-                                        <button className={`region-chip ${region === 'delhi' ? 'active' : ''}`} onClick={() => setRegion('delhi')}>
-                                            🟢 Delhi Shard
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="header-right">
-                                    <div className="user-badge-pill">
-                                        <div style={{ width: '28px', height: '28px', background: '#262626', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                                            {userSession.role ? userSession.role[0].toUpperCase() : 'U'}
-                                        </div>
-                                        <div>
-                                            <strong style={{ fontSize: '12px', display: 'block' }}>{userSession.name || 'User'}</strong>
-                                            <span className={`role-badge ${userSession.role.toUpperCase()}`}>{userSession.role.toUpperCase()}</span>
-                                        </div>
-                                    </div>
-
-                                    <button className="region-chip" onClick={handleSignOut}>
-                                        <i className="fa-solid fa-right-from-bracket"></i> Sign Out
-                                    </button>
-                                </div>
-                            </header>
-
-                            <main className="main-viewport">
-                                <aside className="sidebar-panel">
-                                    <div className="tab-nav">
-                                        <button className={`tab-btn ${activeTab === 'booking' ? 'active' : ''}`} onClick={() => setActiveTab('booking')}>
-                                            🚗 Ride
-                                        </button>
-                                        <button className={`tab-btn ${activeTab === 'driver' ? 'active' : ''} ${userSession.role !== 'driver' && userSession.role !== 'admin' ? 'disabled' : ''}`} onClick={() => (userSession.role === 'driver' || userSession.role === 'admin') && setActiveTab('driver')}>
-                                            🛺 Driver Shift
-                                        </button>
-                                        <button className={`tab-btn ${activeTab === 'admin' ? 'active' : ''} ${userSession.role !== 'admin' ? 'disabled' : ''}`} onClick={() => userSession.role === 'admin' && setActiveTab('admin')}>
-                                            ⚙️ Cluster Ops
-                                        </button>
-                                    </div>
-
-                                    {activeTab === 'booking' && (
-                                        <div>
-                                            <div className="card-box">
-                                                <h2 className="card-title">Request a Ride</h2>
-                                                
-                                                <div className="select-wrap">
-                                                    <label>Pickup Location</label>
-                                                    <select className="uber-select-input" value={pickup} onChange={e => setPickup(e.target.value)}>
-                                                        <option value="bkc">Bandra Kurla Complex (BKC), Mumbai</option>
-                                                        <option value="airport">Mumbai Airport T2</option>
-                                                        <option value="colaba">Gateway of India, Colaba</option>
-                                                        <option value="connaught">Connaught Place, New Delhi</option>
-                                                    </select>
-                                                </div>
-
-                                                <div className="select-wrap">
-                                                    <label>Destination</label>
-                                                    <select className="uber-select-input" value={drop} onChange={e => setDrop(e.target.value)}>
-                                                        <option value="airport">Mumbai Airport T2</option>
-                                                        <option value="bkc">Bandra Kurla Complex (BKC)</option>
-                                                        <option value="colaba">Gateway of India, Colaba</option>
-                                                        <option value="delhi_airport">IGI Airport T3, Delhi</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-
-                                            <div className="surge-banner-box">
-                                                <div>
-                                                    <strong style={{ fontSize: '13px', display: 'block' }}>⚡ High Demand Area</strong>
-                                                    <span style={{ fontSize: '11px', opacity: 0.85 }}>Scikit-Learn RandomForest Model</span>
-                                                </div>
-                                                <strong style={{ fontSize: '14px', background: 'rgba(0,0,0,0.4)', padding: '4px 10px', borderRadius: '12px' }}>
-                                                    {surgeMultiplier}x
-                                                </strong>
-                                            </div>
-
-                                            <div className="card-box">
-                                                <span style={{ fontSize: '11px', color: '#A6A6A6', fontWeight: 600, display: 'block', marginBottom: '10px' }}>
-                                                    SUGGESTED RIDES
-                                                </span>
-
-                                                <div className={`ride-item-card ${selectedRide === 'uberx' ? 'active' : ''}`} onClick={() => setSelectedRide('uberx')}>
-                                                    <span style={{ fontSize: '24px' }}>🚗</span>
-                                                    <div style={{ flex: 1 }}>
-                                                        <strong>UberX</strong>
-                                                        <p style={{ fontSize: '12px', color: '#A6A6A6' }}>Affordable rides</p>
-                                                    </div>
-                                                    <span className="price-text">₹{Math.round((50 + distanceKm * 15) * surgeMultiplier)}</span>
-                                                </div>
-
-                                                <div className={`ride-item-card ${selectedRide === 'black' ? 'active' : ''}`} onClick={() => setSelectedRide('black')}>
-                                                    <span style={{ fontSize: '24px' }}>🚘</span>
-                                                    <div style={{ flex: 1 }}>
-                                                        <strong>Uber Black</strong>
-                                                        <p style={{ fontSize: '12px', color: '#A6A6A6' }}>Luxury sedans</p>
-                                                    </div>
-                                                    <span className="price-text">₹{Math.round((120 + distanceKm * 35) * surgeMultiplier)}</span>
-                                                </div>
-                                            </div>
-
-                                            <button className="cta-btn" onClick={handleRequestRide}>
-                                                Request UberX
-                                            </button>
-                                        </div>
-                                    )}
-
-                                    {activeTab === 'active-trip' && (
-                                        <div>
-                                            <div className="card-box">
-                                                <h2>{tripStage === 'MATCHING' ? 'Connecting to Driver...' : 'Driver En Route'}</h2>
-                                                <p style={{ fontSize: '12px', color: '#A6A6A6' }}>Geohash Bipartite Batch Queue</p>
-                                            </div>
-
-                                            {tripPayload && (
-                                                <div className="card-box">
-                                                    <div style={{ display: 'flex', gap: '14px', marginBottom: '12px' }}>
-                                                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#06C167', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>KB</div>
-                                                        <div>
-                                                            <h3>{tripPayload.driver}</h3>
-                                                            <p style={{ fontSize: '12px', color: '#A6A6A6' }}>{tripPayload.car} • <strong>{tripPayload.plate}</strong></p>
-                                                        </div>
-                                                    </div>
-                                                    <div style={{ background: 'rgba(6,193,103,0.1)', padding: '10px', borderRadius: '8px', fontSize: '12px', color: '#06C167' }}>
-                                                        🛡️ OpenCV + FaceNet Biometrics: <strong>VERIFIED (0.8942)</strong>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            <button className="cta-btn green" onClick={() => setShowReceipt(true)}>
-                                                Complete Trip & Bill
-                                            </button>
-                                        </div>
-                                    )}
-
-                                    {activeTab === 'driver' && (
-                                        <div className="card-box">
-                                            <h2>📷 Biometric Shift Check-In</h2>
-                                            <p style={{ fontSize: '12px', color: '#A6A6A6', margin: '8px 0' }}>OpenCV face detection & FaceNet 512-D embedding match.</p>
-                                            <div style={{ height: '160px', background: '#1c1c1c', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#06C167' }}>
-                                                [Camera Feed Active • Match 0.8942]
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {activeTab === 'admin' && (
-                                        <div className="card-box">
-                                            <h2>⚙️ Cluster Telemetry</h2>
-                                            <p style={{ fontSize: '12px', color: '#A6A6A6', margin: '8px 0' }}>Aiven MySQL Shards & Scikit-Learn Model Controls.</p>
-                                            <div style={{ background: 'rgba(39,110,241,0.15)', color: '#276EF1', padding: '12px', borderRadius: '10px', fontSize: '13px' }}>
-                                                Topology Status: 8 Microservices Online (Port 8000 - 8006)
-                                            </div>
-                                        </div>
-                                    )}
-                                </aside>
-
-                                <section className="map-view">
-                                    <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }}></div>
-                                    <div className="map-badge">
-                                        <span>Geohash Grid: <strong className="code-font">te7udw</strong></span>
-                                    </div>
-                                </section>
-                            </main>
-
-                            {showReceipt && (
-                                <div className="modal-backdrop">
-                                    <div className="receipt-card">
-                                        <h2 style={{ textAlign: 'center' }}>Thanks for riding with KUBER</h2>
-                                        <div className="shard-tag">
-                                            <strong>🗄️ {region.toUpperCase()} SHARD DATABASE</strong>
-                                            <p style={{ fontSize: '11px', marginTop: '2px' }}>ACID Transaction Billed (Port 3307 / kuber_db_{region})</p>
-                                        </div>
-                                        <div style={{ borderTop: '1px solid #262626', paddingTop: '12px', margin: '14px 0' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                                <span>Distance ({distanceKm} km × ₹15)</span>
-                                                <span>₹{(distanceKm * 15).toFixed(2)}</span>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 'bold', borderTop: '1px dashed #262626', paddingTop: '10px' }}>
-                                                <span>Total Fare</span>
-                                                <span className="green-font">₹{Math.round((50 + distanceKm * 15) * surgeMultiplier)}.00</span>
-                                            </div>
-                                        </div>
-                                        <button className="cta-btn" onClick={() => { setShowReceipt(false); setTripStage('IDLE'); setActiveTab('booking'); }}>
-                                            Done
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                        </React.Fragment>
-                    )}
-                </div>
-            );
-        }
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<KuberApp />);
+            checkSession();
+        });
     </script>
 </body>
 </html>
