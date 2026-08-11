@@ -19,8 +19,8 @@
     <!-- Custom Production Styles -->
     <link rel="stylesheet" href="styles.css">
 
-    <!-- Official Clerk JS Library -->
-    <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" crossorigin="anonymous"></script>
+    <!-- Official Clerk JS CDN Loader (High Speed 0.1s) -->
+    <script async crossorigin="anonymous" data-clerk-publishable-key="pk_test_ZW1lcmdpbmctbXV0dC04LmNsZXJrLmFjY291bnRzLmRldiQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
 </head>
 <body class="uber-theme">
 
@@ -35,7 +35,6 @@
                 </div>
 
                 <!-- OFFICIAL CLERK SIGN-IN COMPONENT MOUNT DIV -->
-
                 <div id="sign-in" style="min-height:340px;display:flex;align-items:center;justify-content:center;">
                     <div style="text-align:center;color:#A6A6A6;font-size:13px;">
                         <i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px;color:#06C167;margin-bottom:10px;"></i>
@@ -144,58 +143,46 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
-    <!-- OFFICIAL CLERK SDK INITIALIZATION SCRIPT -->
+    <!-- HIGH-SPEED CLERK JS INITIALIZATION -->
     <script>
-        document.addEventListener("DOMContentLoaded", async () => {
+        document.addEventListener("DOMContentLoaded", () => {
             const RENDER_BACKEND = "https://kuber-tjn2.onrender.com";
             const LOCAL_BACKEND = "http://localhost:8006";
             const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
                 ? LOCAL_BACKEND : RENDER_BACKEND;
 
-            // Official Clerk Initialization Pattern
+            const PUBLISHABLE_KEY = "pk_test_ZW1lcmdpbmctbXV0dC04LmNsZXJrLmFjY291bnRzLmRldiQ";
 
-            const publishableKey = "pk_test_ZW1lcmdpbmctbXV0dC04LmNsZXJrLmFjY291bnRzLmRldiQ";
-            const clerkDomain = atob(publishableKey.split('_')[2]).slice(0, -1);
+            async function initClerk() {
+                if (!window.Clerk) {
+                    setTimeout(initClerk, 100);
+                    return;
+                }
 
-            try {
-                // Dynamically load @clerk/ui bundle
-                await new Promise((resolve, reject) => {
-                    const script = document.createElement('script');
-                    script.src = `https://${clerkDomain}/npm/@clerk/ui@1/dist/ui.browser.js`;
-                    script.async = true;
-                    script.crossOrigin = 'anonymous';
-                    script.onload = resolve;
-                    script.onerror = () => reject(new Error('Failed to load @clerk/ui bundle'));
-                    document.head.appendChild(script);
-                });
-
-                // Initialize Clerk Object
-                const clerk = new window.Clerk(publishableKey);
-                await clerk.load({
-                    ui: { ClerkUI: window.__internal_ClerkUICtor },
-                    appearance: {
-                        variables: {
-                            colorPrimary: '#06C167',
-                            colorBackground: '#141414',
-                            colorText: '#FFFFFF',
-                            colorTextSecondary: '#A6A6A6',
-                            colorInputBackground: '#1c1c1c',
-                            colorInputText: '#FFFFFF'
+                try {
+                    await window.Clerk.load({
+                        publishableKey: PUBLISHABLE_KEY,
+                        appearance: {
+                            variables: {
+                                colorPrimary: '#06C167',
+                                colorBackground: '#141414',
+                                colorText: '#FFFFFF',
+                                colorTextSecondary: '#A6A6A6',
+                                colorInputBackground: '#1c1c1c',
+                                colorInputText: '#FFFFFF'
+                            }
                         }
-                    }
-                });
+                    });
 
-                // Handle Auth State Switch
-                if (clerk.user || clerk.isSignedIn) {
-                    document.getElementById('auth-viewport').style.display = "none";
-                    document.getElementById('dashboard-viewport').style.display = "flex";
+                    if (window.Clerk.user) {
+                        document.getElementById('auth-viewport').style.display = "none";
+                        document.getElementById('dashboard-viewport').style.display = "flex";
 
-                    const userButtonDiv = document.getElementById('user-button');
-                    if (userButtonDiv) clerk.mountUserButton(userButtonDiv);
+                        const userBtn = document.getElementById('user-button');
+                        if (userBtn) window.Clerk.mountUserButton(userBtn);
 
-                    // Sync User with FastAPI Backend
-                    const user = clerk.user;
-                    if (user) {
+                        // Sync User with FastAPI
+                        const user = window.Clerk.user;
                         fetch(`${API_BASE}/auth/clerk-sync`, {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},
@@ -206,35 +193,24 @@
                                 role: "RIDER"
                             })
                         }).catch(e => {});
-                    }
 
-                    initMap();
-                } else {
-                    document.getElementById('auth-viewport').style.display = "flex";
-                    document.getElementById('dashboard-viewport').style.display = "none";
+                        initMap();
+                    } else {
+                        document.getElementById('auth-viewport').style.display = "flex";
+                        document.getElementById('dashboard-viewport').style.display = "none";
 
-                    const signInDiv = document.getElementById('sign-in');
-                    if (signInDiv) clerk.mountSignIn(signInDiv);
-                }
-
-            } catch (err) {
-                // CDN Fallback initialization if ui.browser.js fails
-                if (window.Clerk) {
-                    try {
-                        await window.Clerk.load({ publishableKey: publishableKey });
-                        if (window.Clerk.user) {
-                            document.getElementById('auth-viewport').style.display = "none";
-                            document.getElementById('dashboard-viewport').style.display = "flex";
-                            const userButtonDiv = document.getElementById('user-button');
-                            if (userButtonDiv) window.Clerk.mountUserButton(userButtonDiv);
-                            initMap();
-                        } else {
-                            const signInDiv = document.getElementById('sign-in');
-                            if (signInDiv) window.Clerk.mountSignIn(signInDiv);
+                        const signInDiv = document.getElementById('sign-in');
+                        if (signInDiv) {
+                            signInDiv.innerHTML = "";
+                            window.Clerk.mountSignIn(signInDiv);
                         }
-                    } catch (e) {}
+                    }
+                } catch(e) {
+                    setTimeout(initClerk, 300);
                 }
             }
+
+            initClerk();
 
             // Leaflet Map Init
             let map = null;
