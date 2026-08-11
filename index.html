@@ -251,10 +251,10 @@
             const formRegister = document.getElementById('form-register');
             const statusBanner = document.getElementById('auth-status-banner');
 
-            // Initialize Clerk SDK
+            // Initialize Clerk SDK first to detect OAuth return redirects
             async function initClerkSDK() {
                 if (!window.Clerk) {
-                    setTimeout(initClerkSDK, 200);
+                    setTimeout(initClerkSDK, 150);
                     return;
                 }
 
@@ -265,8 +265,8 @@
                         if (user) {
                             saveSession({
                                 role: selectedRole,
-                                email: user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : "user@clerk.dev",
-                                name: user.fullName || user.firstName || "Clerk OAuth User",
+                                email: user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : "google_user@gmail.com",
+                                name: user.fullName || user.firstName || "Google OAuth User",
                                 user_id: user.id
                             });
                         }
@@ -276,14 +276,15 @@
                         const u = window.Clerk.user;
                         saveSession({
                             role: selectedRole,
-                            email: u.primaryEmailAddress ? u.primaryEmailAddress.emailAddress : "user@clerk.dev",
-                            name: u.fullName || u.firstName || "Clerk OAuth User",
+                            email: u.primaryEmailAddress ? u.primaryEmailAddress.emailAddress : "google_user@gmail.com",
+                            name: u.fullName || u.firstName || "Google OAuth User",
                             user_id: u.id
                         });
+                        return;
                     }
                 } catch(e) {}
+                checkSession();
             }
-            initClerkSDK();
 
             // Session check
             function checkSession() {
@@ -315,6 +316,9 @@
                 authViewport.style.display = "flex";
                 dashboardViewport.style.display = "none";
             }
+
+            initClerkSDK();
+
 
             // Mode Tabs
             btnTabSignIn.addEventListener('click', () => {
