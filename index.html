@@ -447,7 +447,8 @@
                         return;
                     } catch (e) {}
                 }
-                window.location.href = "https://emerging-mutt-8.accounts.dev/sign-in";
+                const redirectTarget = window.location.origin + window.location.pathname;
+                window.location.href = `https://emerging-mutt-8.accounts.dev/sign-in?redirect_url=${encodeURIComponent(redirectTarget)}`;
             });
 
             // GitHub OAuth Handler
@@ -459,8 +460,10 @@
                         return;
                     } catch (e) {}
                 }
-                window.location.href = "https://emerging-mutt-8.accounts.dev/sign-in";
+                const redirectTarget = window.location.origin + window.location.pathname;
+                window.location.href = `https://emerging-mutt-8.accounts.dev/sign-in?redirect_url=${encodeURIComponent(redirectTarget)}`;
             });
+
 
 
 
