@@ -19,9 +19,10 @@
     <!-- Custom Production Styles -->
     <link rel="stylesheet" href="styles.css">
 
-    <!-- Official Clerk JS CDN Loader -->
-    <script async crossorigin="anonymous" data-clerk-publishable-key="pk_test_ZW1lcmdpbmctbXV0dC04LmNsZXJrLmFjY291bnRzLmRldiQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
+    <!-- Official Clerk JS Loader (Synchronous High Priority) -->
+    <script crossorigin="anonymous" data-clerk-publishable-key="pk_test_ZW1lcmdpbmctbXV0dC04LmNsZXJrLmFjY291bnRzLmRldiQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
 </head>
+
 <body class="uber-theme">
 
     <div id="app">
@@ -446,7 +447,7 @@
                         return;
                     } catch (e) {}
                 }
-                showStatus("⌛ Clerk initializing... Click again in 2 seconds.", true);
+                window.location.href = "https://emerging-mutt-8.accounts.dev/sign-in";
             });
 
             // GitHub OAuth Handler
@@ -458,8 +459,10 @@
                         return;
                     } catch (e) {}
                 }
-                showStatus("⌛ Clerk initializing... Click again in 2 seconds.", true);
+                window.location.href = "https://emerging-mutt-8.accounts.dev/sign-in";
             });
+
+
 
 
             // Sign Out
