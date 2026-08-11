@@ -19,10 +19,9 @@
     <!-- Custom Production Styles -->
     <link rel="stylesheet" href="styles.css">
 
-    <!-- Official Clerk JS Loader (Synchronous High Priority) -->
-    <script crossorigin="anonymous" data-clerk-publishable-key="pk_test_ZW1lcmdpbmctbXV0dC04LmNsZXJrLmFjY291bnRzLmRldiQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
+    <!-- Official Clerk JS Loader -->
+    <script async crossorigin="anonymous" data-clerk-publishable-key="pk_test_ZW1lcmdpbmctbXV0dC04LmNsZXJrLmFjY291bnRzLmRldiQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
 </head>
-
 <body class="uber-theme">
 
     <div id="app">
@@ -319,7 +318,6 @@
 
             initClerkSDK();
 
-
             // Mode Tabs
             btnTabSignIn.addEventListener('click', () => {
                 btnTabSignIn.classList.add('active');
@@ -445,39 +443,16 @@
             // Google OAuth Handler
             document.getElementById('btn-oauth-google').addEventListener('click', async () => {
                 showStatus("⌛ Opening Google OAuth Window...");
-                if (window.Clerk && window.Clerk.openSignIn) {
-                    try {
-                        await window.Clerk.openSignIn({
-                            strategy: 'oauth_google',
-                            redirectUrl: window.location.href,
-                            redirectUrlComplete: window.location.href
-                        });
-                        return;
-                    } catch (e) {}
-                }
-                showStatus("❌ Clerk SDK loading... Please retry in 2 seconds.", true);
+                const target = window.location.origin + window.location.pathname;
+                window.location.href = `https://emerging-mutt-8.accounts.dev/sign-in?redirect_url=${encodeURIComponent(target)}`;
             });
 
             // GitHub OAuth Handler
             document.getElementById('btn-oauth-github').addEventListener('click', async () => {
                 showStatus("⌛ Opening GitHub OAuth Window...");
-                if (window.Clerk && window.Clerk.openSignIn) {
-                    try {
-                        await window.Clerk.openSignIn({
-                            strategy: 'oauth_github',
-                            redirectUrl: window.location.href,
-                            redirectUrlComplete: window.location.href
-                        });
-                        return;
-                    } catch (e) {}
-                }
-                showStatus("❌ Clerk SDK loading... Please retry in 2 seconds.", true);
+                const target = window.location.origin + window.location.pathname;
+                window.location.href = `https://emerging-mutt-8.accounts.dev/sign-in?redirect_url=${encodeURIComponent(target)}`;
             });
-
-
-
-
-
 
             // Sign Out
             document.getElementById('btn-signout').addEventListener('click', async () => {
@@ -498,8 +473,6 @@
                     L.control.zoom({ position: 'bottomright' }).addTo(map);
                 } catch(e) {}
             }
-
-            checkSession();
         });
     </script>
 </body>
