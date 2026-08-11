@@ -441,24 +441,70 @@
                 }
             });
 
-            // OAuth
-            document.getElementById('btn-oauth-google').addEventListener('click', () => {
-                saveSession({
-                    role: selectedRole,
-                    email: `google_${Date.now()}@gmail.com`,
-                    name: "Google OAuth User",
-                    user_id: `clerk_google_${Date.now().toString(36)}`
-                });
+            // Initialize Official Clerk SDK
+            const PUBLISHABLE_KEY = "pk_test_ZW1lcmdpbmctbXV0dC04LmNsZXJrLmFjY291bnRzLmRldiQ";
+            async function initClerkSDK() {
+                if (window.Clerk) {
+                    try {
+                        await window.Clerk.load({ publishableKey: PUBLISHABLE_KEY });
+                        window.Clerk.addListener(({ user }) => {
+                            if (user) {
+                                saveSession({
+                                    role: selectedRole,
+                                    email: user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : "clerk_user@gmail.com",
+                                    name: user.fullName || "Clerk Google User",
+                                    user_id: user.id
+                                });
+                            }
+                        });
+                    } catch (e) {}
+                }
+            }
+            initClerkSDK();
+
+            // Authentic Clerk OAuth Handlers
+            document.getElementById('btn-oauth-google').addEventListener('click', async () => {
+                showStatus("⌛ Opening Clerk Google OAuth Consent Window...");
+                try {
+                    if (window.Clerk && window.Clerk.openSignIn) {
+                        await window.Clerk.openSignIn({
+                            strategy: 'oauth_google'
+                        });
+                    } else if (window.Clerk && window.Clerk.authenticateWithRedirect) {
+                        await window.Clerk.authenticateWithRedirect({
+                            strategy: 'oauth_google',
+                            redirectUrl: window.location.href,
+                            redirectUrlComplete: window.location.href
+                        });
+                    } else {
+                        showStatus("❌ Clerk SDK loading... Please click again in 2 seconds.", true);
+                    }
+                } catch (e) {
+                    showStatus("❌ Clerk Google OAuth: " + e.message, true);
+                }
             });
 
-            document.getElementById('btn-oauth-github').addEventListener('click', () => {
-                saveSession({
-                    role: selectedRole,
-                    email: `github_${Date.now()}@github.com`,
-                    name: "GitHub Developer",
-                    user_id: `clerk_github_${Date.now().toString(36)}`
-                });
+            document.getElementById('btn-oauth-github').addEventListener('click', async () => {
+                showStatus("⌛ Opening Clerk GitHub OAuth Window...");
+                try {
+                    if (window.Clerk && window.Clerk.openSignIn) {
+                        await window.Clerk.openSignIn({
+                            strategy: 'oauth_github'
+                        });
+                    } else if (window.Clerk && window.Clerk.authenticateWithRedirect) {
+                        await window.Clerk.authenticateWithRedirect({
+                            strategy: 'oauth_github',
+                            redirectUrl: window.location.href,
+                            redirectUrlComplete: window.location.href
+                        });
+                    } else {
+                        showStatus("❌ Clerk SDK loading... Please click again in 2 seconds.", true);
+                    }
+                } catch (e) {
+                    showStatus("❌ Clerk GitHub OAuth: " + e.message, true);
+                }
             });
+
 
             // Sign Out
             document.getElementById('btn-signout').addEventListener('click', () => {
