@@ -585,10 +585,11 @@
                 window.location.href = window.location.pathname + "?logout=true";
             });
 
-            // Leaflet Map & Synchronized Movement Engine
+            // Leaflet Map & Live Multi-Driver Simulation Engine
             let map = null;
             let carMarker = null;
             let animInterval = null;
+            let driverFleetMarkers = [];
 
             const CITY_COORDS = {
                 mumbai: [19.0600, 72.8350],
@@ -603,10 +604,46 @@
                     map = L.map('leaflet-map', { zoomControl: false }).setView(CITY_COORDS.mumbai, 13);
                     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
                     L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+                    // Spawn Live Simulated Fleet of 25 Active Drivers
+                    spawnDriverFleet(CITY_COORDS.mumbai);
                 } catch(e) {}
             }
 
-            // City Focus Switcher
+            // Live Driver Fleet Generator & Telemetry Simulator
+            function spawnDriverFleet(centerCoords) {
+                // Clear existing driver markers
+                driverFleetMarkers.forEach(m => map.removeLayer(m));
+                driverFleetMarkers = [];
+
+                for (let i = 0; i < 25; i++) {
+                    const offsetLat = (Math.random() - 0.5) * 0.04;
+                    const offsetLon = (Math.random() - 0.5) * 0.04;
+                    const lat = centerCoords[0] + offsetLat;
+                    const lon = centerCoords[1] + offsetLon;
+
+                    const marker = L.marker([lat, lon], {
+                        icon: L.divIcon({
+                            className: 'driver-fleet-pin',
+                            html: '<div style="background:#06C167;color:#000;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;box-shadow:0 0 14px #06C167;"><i class="fa-solid fa-car-side" style="font-size:12px;"></i></div>'
+                        })
+                    }).addTo(map);
+
+                    marker.bindPopup(`<b>Driver #DRV-${1000 + i}</b><br>Vehicle: UberX Sedan<br>Status: ONLINE`);
+                    driverFleetMarkers.push({ marker, lat, lon });
+                }
+
+                // Move drivers smoothly every 1.5 seconds
+                setInterval(() => {
+                    driverFleetMarkers.forEach(d => {
+                        d.lat += (Math.random() - 0.5) * 0.0008;
+                        d.lon += (Math.random() - 0.5) * 0.0008;
+                        d.marker.setLatLng([d.lat, d.lon]);
+                    });
+                }, 1500);
+            }
+
+            // City Focus Switcher & Fleet Repositioner
             document.querySelectorAll('[data-city]').forEach(chip => {
                 chip.addEventListener('click', () => {
                     document.querySelectorAll('[data-city]').forEach(c => c.classList.remove('active'));
@@ -614,9 +651,11 @@
                     activeCity = chip.getAttribute('data-city');
                     if (map && CITY_COORDS[activeCity]) {
                         map.flyTo(CITY_COORDS[activeCity], 13);
+                        spawnDriverFleet(CITY_COORDS[activeCity]);
                     }
                 });
             });
+
 
             // 1. RIDER PERSPECTIVE: REQUEST RIDE
             document.getElementById('btn-request-ride').addEventListener('click', () => {
