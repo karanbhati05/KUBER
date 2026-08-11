@@ -18,7 +18,11 @@
     
     <!-- Custom Production Styles -->
     <link rel="stylesheet" href="styles.css">
+
+    <!-- Official Clerk JS Loader -->
+    <script async crossorigin="anonymous" data-clerk-publishable-key="pk_test_ZW1lcmdpbmctbXV0dC04LmNsZXJrLmFjY291bnRzLmRldiQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
 </head>
+
 <body class="uber-theme">
 
     <!-- 1. AUTHENTICATION & REGISTRATION SCREEN (SHOWN WHEN UNAUTHENTICATED) -->
@@ -464,46 +468,43 @@
 
             // Authentic Clerk OAuth Handlers
             document.getElementById('btn-oauth-google').addEventListener('click', async () => {
-                showStatus("⌛ Opening Clerk Google OAuth Consent Window...");
+                showStatus("⌛ Redirecting to Google OAuth Sign-In...");
                 try {
                     if (window.Clerk && window.Clerk.openSignIn) {
-                        await window.Clerk.openSignIn({
-                            strategy: 'oauth_google'
-                        });
+                        await window.Clerk.openSignIn({ strategy: 'oauth_google' });
+                        return;
                     } else if (window.Clerk && window.Clerk.authenticateWithRedirect) {
                         await window.Clerk.authenticateWithRedirect({
                             strategy: 'oauth_google',
                             redirectUrl: window.location.href,
                             redirectUrlComplete: window.location.href
                         });
-                    } else {
-                        showStatus("❌ Clerk SDK loading... Please click again in 2 seconds.", true);
+                        return;
                     }
-                } catch (e) {
-                    showStatus("❌ Clerk Google OAuth: " + e.message, true);
-                }
+                } catch (e) {}
+                // Direct Clerk Hosted Portal Fallback
+                window.location.href = "https://emerging-mutt-8.clerk.accounts.dev/sign-in?redirect_url=" + encodeURIComponent(window.location.href);
             });
 
             document.getElementById('btn-oauth-github').addEventListener('click', async () => {
-                showStatus("⌛ Opening Clerk GitHub OAuth Window...");
+                showStatus("⌛ Redirecting to GitHub OAuth Sign-In...");
                 try {
                     if (window.Clerk && window.Clerk.openSignIn) {
-                        await window.Clerk.openSignIn({
-                            strategy: 'oauth_github'
-                        });
+                        await window.Clerk.openSignIn({ strategy: 'oauth_github' });
+                        return;
                     } else if (window.Clerk && window.Clerk.authenticateWithRedirect) {
                         await window.Clerk.authenticateWithRedirect({
                             strategy: 'oauth_github',
                             redirectUrl: window.location.href,
                             redirectUrlComplete: window.location.href
                         });
-                    } else {
-                        showStatus("❌ Clerk SDK loading... Please click again in 2 seconds.", true);
+                        return;
                     }
-                } catch (e) {
-                    showStatus("❌ Clerk GitHub OAuth: " + e.message, true);
-                }
+                } catch (e) {}
+                // Direct Clerk Hosted Portal Fallback
+                window.location.href = "https://emerging-mutt-8.clerk.accounts.dev/sign-in?redirect_url=" + encodeURIComponent(window.location.href);
             });
+
 
 
             // Sign Out
