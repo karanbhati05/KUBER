@@ -447,12 +447,15 @@
                 showStatus("⌛ Opening Google OAuth Window...");
                 if (window.Clerk && window.Clerk.openSignIn) {
                     try {
-                        await window.Clerk.openSignIn({ strategy: 'oauth_google' });
+                        await window.Clerk.openSignIn({
+                            strategy: 'oauth_google',
+                            redirectUrl: window.location.href,
+                            redirectUrlComplete: window.location.href
+                        });
                         return;
                     } catch (e) {}
                 }
-                const redirectTarget = window.location.origin + window.location.pathname;
-                window.location.href = `https://emerging-mutt-8.accounts.dev/sign-in?redirect_url=${encodeURIComponent(redirectTarget)}`;
+                showStatus("❌ Clerk SDK loading... Please retry in 2 seconds.", true);
             });
 
             // GitHub OAuth Handler
@@ -460,13 +463,17 @@
                 showStatus("⌛ Opening GitHub OAuth Window...");
                 if (window.Clerk && window.Clerk.openSignIn) {
                     try {
-                        await window.Clerk.openSignIn({ strategy: 'oauth_github' });
+                        await window.Clerk.openSignIn({
+                            strategy: 'oauth_github',
+                            redirectUrl: window.location.href,
+                            redirectUrlComplete: window.location.href
+                        });
                         return;
                     } catch (e) {}
                 }
-                const redirectTarget = window.location.origin + window.location.pathname;
-                window.location.href = `https://emerging-mutt-8.accounts.dev/sign-in?redirect_url=${encodeURIComponent(redirectTarget)}`;
+                showStatus("❌ Clerk SDK loading... Please retry in 2 seconds.", true);
             });
+
 
 
 
