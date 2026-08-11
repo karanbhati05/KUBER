@@ -271,26 +271,34 @@
             }
             checkHealth();
 
-            // Session check
+            // Session check (Defaults to showing Login Page unless valid active session)
             function checkSession() {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('logout') === 'true') {
+                    localStorage.removeItem('kuber_auth_session');
+                }
+
                 const raw = localStorage.getItem('kuber_auth_session');
                 if (raw) {
                     try {
                         const session = JSON.parse(raw);
-                        authViewport.style.display = "none";
-                        dashboardViewport.style.display = "flex";
-                        
-                        document.getElementById('user-name-display').innerText = session.name || "User";
-                        document.getElementById('user-role-tag').innerText = (session.role || "rider").toUpperCase();
-                        document.getElementById('user-avatar-badge').innerText = (session.role || "R")[0].toUpperCase();
-                        
-                        initMap();
-                        return;
+                        if (session && session.email && session.role) {
+                            authViewport.style.display = "none";
+                            dashboardViewport.style.display = "flex";
+                            
+                            document.getElementById('user-name-display').innerText = session.name || "User";
+                            document.getElementById('user-role-tag').innerText = (session.role || "rider").toUpperCase();
+                            document.getElementById('user-avatar-badge').innerText = (session.role || "R")[0].toUpperCase();
+                            
+                            initMap();
+                            return;
+                        }
                     } catch(e) {}
                 }
                 authViewport.style.display = "flex";
                 dashboardViewport.style.display = "none";
             }
+
 
             // Mode Tabs
             btnTabSignIn.addEventListener('click', () => {
