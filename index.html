@@ -122,7 +122,11 @@
 
             const syncUserToBackend = (user, userRole) => {
                 const email = user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : "clerk_user@kuber.dev";
-                fetch('http://localhost:8006/auth/clerk-sync', {
+                const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                    ? 'http://localhost:8006'
+                    : 'https://kuber-tjn2.onrender.com';
+
+                fetch(`${apiBase}/auth/clerk-sync`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -133,6 +137,8 @@
                     })
                 }).catch(e => {});
             };
+
+
 
             // Initialize Map
             useEffect(() => {

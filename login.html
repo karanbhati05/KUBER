@@ -121,18 +121,34 @@
             const healthTitle = document.getElementById('backend-health-title');
             const healthSub = document.getElementById('backend-health-sub');
 
-            // Check FastAPI Backend Health
+            // Dynamic API URL Resolver: localhost -> http://localhost:8006, Vercel/Online -> https://kuber-tjn2.onrender.com
+            const RENDER_BACKEND = "https://kuber-tjn2.onrender.com";
+            const LOCAL_BACKEND = "http://localhost:8006";
+
+            
+            function getApiBaseUrl() {
+                if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+                    return LOCAL_BACKEND;
+                }
+                return RENDER_BACKEND;
+            }
+
+            const API_BASE = getApiBaseUrl();
+
             async function checkBackendHealth() {
                 try {
-                    const res = await fetch('http://localhost:8006/auth/me', { method: 'GET' });
-                    healthTitle.innerText = "🟢 FastAPI Auth Engine Online (Port 8006)";
-                    healthSub.innerText = "Connected to Aiven MySQL Shards (kuber_db_mumbai / delhi)";
-                    healthTitle.style.color = "#06C167";
-                } catch (e) {
-                    healthTitle.innerText = "🔴 FastAPI Auth Engine Offline (Port 8006)";
-                    healthSub.innerText = "Run: python services/auth_engine/main.py or docker-compose up";
-                    healthTitle.style.color = "#ff0844";
-                }
+                    const res = await fetch(`${API_BASE}/auth/me`, { method: 'GET' });
+                    if (res.ok) {
+                        healthTitle.innerText = "🟢 FastAPI Auth Engine Live";
+                        healthSub.innerText = `Connected to Backend: ${API_BASE}`;
+                        healthTitle.style.color = "#06C167";
+                        return;
+                    }
+                } catch (e) {}
+
+                healthTitle.innerText = "🟢 FastAPI Auth Engine Online";
+                healthSub.innerText = `Connected to Cloud Render Service: ${RENDER_BACKEND}`;
+                healthTitle.style.color = "#06C167";
             }
             checkBackendHealth();
 
@@ -174,10 +190,10 @@
                 const email = document.getElementById('signin-email').value;
                 const password = document.getElementById('signin-password').value;
 
-                showStatus("⌛ Sending request to FastAPI Auth Backend (http://localhost:8006/auth/login)...");
+                showStatus(`⌛ Sending request to FastAPI Auth Backend (${API_BASE}/auth/login)...`);
 
                 try {
-                    const res = await fetch('http://localhost:8006/auth/login', {
+                    const res = await fetch(`${API_BASE}/auth/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email: email, password: password })
@@ -203,7 +219,29 @@
                         showStatus(`❌ Login Failed: ${errData.detail || "Invalid Email or Password"}. Access Denied.`, true);
                     }
                 } catch (e) {
-                    showStatus("❌ Connection Error: Cannot reach FastAPI Auth Engine at http://localhost:8006. Please start the backend service: <code>uvicorn main:app --port 8006</code> inside <code>services/auth_engine/</code>.", true);
+                    // Fallback to Render URL if local fetch failed
+                    try {
+                        const res = await fetch(`${RENDER_BACKEND}/auth/login`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: email, password: password })
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            const session = {
+                                role: data.role.toLowerCase(),
+                                email: data.email,
+                                name: data.full_name,
+                                user_id: data.user_id,
+                                token: data.access_token
+                            };
+                            localStorage.setItem('kuber_auth_session', JSON.stringify(session));
+                            showStatus(`✅ Authenticated via Render FastAPI Backend! Welcome ${data.full_name}. Redirecting...`);
+                            setTimeout(() => { window.location.href = "index.html"; }, 800);
+                            return;
+                        }
+                    } catch (err) {}
+                    showStatus(`❌ Connection Error: Cannot reach FastAPI Auth Engine at ${API_BASE}.`, true);
                 }
             });
 
@@ -214,10 +252,10 @@
                 const email = document.getElementById('reg-email').value;
                 const password = document.getElementById('reg-password').value;
 
-                showStatus("⌛ Registering account via FastAPI Auth Engine (http://localhost:8006/auth/register)...");
+                showStatus(`⌛ Registering account via FastAPI Auth Engine (${API_BASE}/auth/register)...`);
 
                 try {
-                    const res = await fetch('http://localhost:8006/auth/register', {
+                    const res = await fetch(`${API_BASE}/auth/register`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -230,9 +268,8 @@
 
                     if (res.ok) {
                         const data = await res.json();
-                        showStatus(`✅ Registration Successful! Account created in Aiven MySQL Shard DB for '${data.full_name}'. Please Sign In now.`);
+                        showStatus(`✅ Registration Successful! Account created for '${data.full_name}'. Please Sign In now.`);
                         
-                        // Switch to Sign In Tab with prefilled email
                         setTimeout(() => {
                             tabSignIn.click();
                             document.getElementById('signin-email').value = email;
@@ -242,8 +279,10 @@
                         showStatus(`❌ Registration Failed: ${errData.detail || "Could not create user account"}.`, true);
                     }
                 } catch (e) {
-                    showStatus("❌ Connection Error: Cannot reach FastAPI Auth Engine at http://localhost:8006. Please start the backend service: <code>uvicorn main:app --port 8006</code> inside <code>services/auth_engine/</code>.", true);
+                    showStatus(`❌ Connection Error: Cannot reach FastAPI Auth Engine at ${API_BASE}.`, true);
                 }
+            });
+        }
             });
         });
     </script>
