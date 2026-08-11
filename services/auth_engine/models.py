@@ -21,3 +21,20 @@ class User(Base):
     role = Column(Enum(UserRole), nullable=False, default=UserRole.RIDER)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class DriverProfile(Base):
+    __tablename__ = "driver_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    driver_id = Column(String(50), unique=True, index=True, nullable=False)
+    user_id = Column(String(50), index=True, nullable=False)
+    vehicle_type = Column(String(30), default="UberX") # UberX, UberXL, UberBlack, Auto
+    vehicle_number = Column(String(30), nullable=False)
+    is_online = Column(Boolean, default=False)
+    is_verified = Column(Boolean, default=True)
+    geohash = Column(String(12), index=True, default="te7udw")
+    lat = Column(String(20), default="19.0600")
+    lon = Column(String(20), default="72.8350")
+    rating = Column(String(10), default="4.92")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
