@@ -19,13 +19,13 @@
     <!-- Custom Production Styles -->
     <link rel="stylesheet" href="styles.css">
 
-    <!-- Official Clerk JS CDN Loader (High Speed 0.1s) -->
+    <!-- Official Clerk JS CDN Loader -->
     <script async crossorigin="anonymous" data-clerk-publishable-key="pk_test_ZW1lcmdpbmctbXV0dC04LmNsZXJrLmFjY291bnRzLmRldiQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
 </head>
 <body class="uber-theme">
 
     <div id="app">
-        <!-- 1. AUTHENTICATION VIEW (SHOWN WHEN SIGNED OUT) -->
+        <!-- 1. AUTHENTICATION & REGISTRATION VIEW (SHOWN WHEN SIGNED OUT) -->
         <div id="auth-viewport" class="auth-page-container">
             <div class="auth-wrapper-card">
                 
@@ -34,13 +34,90 @@
                     <p class="uber-brand-sub">Enterprise Distributed Platform • Auth & Registration</p>
                 </div>
 
-                <!-- OFFICIAL CLERK SIGN-IN COMPONENT MOUNT DIV -->
-                <div id="sign-in" style="min-height:340px;display:flex;align-items:center;justify-content:center;">
-                    <div style="text-align:center;color:#A6A6A6;font-size:13px;">
-                        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px;color:#06C167;margin-bottom:10px;"></i>
-                        <p>Loading Official Clerk Sign-In Engine...</p>
+                <!-- Mode Selector Tabs: Sign In vs Create Account -->
+                <div class="auth-mode-tabs">
+                    <button id="btn-tab-signin" class="mode-tab active">Sign In</button>
+                    <button id="btn-tab-register" class="mode-tab">Create Account</button>
+                </div>
+
+                <!-- Role Selector Bar -->
+                <div class="uber-role-grid">
+                    <div class="role-tile active" data-role="rider">
+                        <div class="tile-icon"><i class="fa-solid fa-user-large"></i></div>
+                        <div class="tile-info">
+                            <h3>Rider</h3>
+                            <span>Book & Track</span>
+                        </div>
+                    </div>
+                    <div class="role-tile" data-role="driver">
+                        <div class="tile-icon"><i class="fa-solid fa-taxi"></i></div>
+                        <div class="tile-info">
+                            <h3>Driver</h3>
+                            <span>Biometrics</span>
+                        </div>
+                    </div>
+                    <div class="role-tile" data-role="admin">
+                        <div class="tile-icon"><i class="fa-solid fa-sliders"></i></div>
+                        <div class="tile-info">
+                            <h3>Admin Ops</h3>
+                            <span>Shards & ML</span>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Clerk One-Click OAuth Providers -->
+                <div class="clerk-auth-box">
+                    <div class="oauth-buttons-grid">
+                        <button id="btn-oauth-google" class="btn-oauth-provider google">
+                            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+                            <span>Google Sign-In</span>
+                        </button>
+                        <button id="btn-oauth-github" class="btn-oauth-provider github">
+                            <i class="fa-brands fa-github"></i>
+                            <span>GitHub</span>
+                        </button>
+                    </div>
+                    <div class="or-divider"><span>OR ENTER CREDENTIALS BELOW</span></div>
+                </div>
+
+                <!-- Status Notification Banner -->
+                <div id="auth-status-banner" class="auth-status-banner" style="display:none;"></div>
+
+                <!-- FORM 1: SIGN IN -->
+                <form id="form-signin" class="login-form active">
+                    <div class="input-field-group">
+                        <label>Email Address</label>
+                        <input type="email" id="signin-email" class="uber-input" value="rider_karan@gmail.com" required>
+                    </div>
+                    <div class="input-field-group">
+                        <label>Password</label>
+                        <input type="password" id="signin-password" class="uber-input" value="password123" required>
+                    </div>
+                    <button type="submit" class="btn-uber-black btn-full glow-btn">
+                        <span>Sign In to Portal</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </form>
+
+                <!-- FORM 2: CREATE ACCOUNT (REGISTRATION) -->
+                <form id="form-register" class="login-form">
+                    <div class="input-field-group">
+                        <label>Full Name</label>
+                        <input type="text" id="reg-name" class="uber-input" placeholder="e.g. Rahul Sharma" required>
+                    </div>
+                    <div class="input-field-group">
+                        <label>Email Address</label>
+                        <input type="email" id="reg-email" class="uber-input" placeholder="e.g. rahul@gmail.com" required>
+                    </div>
+                    <div class="input-field-group">
+                        <label>Create Password</label>
+                        <input type="password" id="reg-password" class="uber-input" placeholder="At least 6 characters" required>
+                    </div>
+                    <button type="submit" class="btn-uber-green btn-full glow-btn">
+                        <span>Create Account & Sync to Shard DB</span>
+                        <i class="fa-solid fa-user-plus"></i>
+                    </button>
+                </form>
 
             </div>
         </div>
@@ -58,8 +135,17 @@
                 </div>
 
                 <div class="header-right">
-                    <!-- Clerk Official User Button Div -->
-                    <div id="user-button"></div>
+                    <div class="user-badge-pill">
+                        <div id="user-avatar-badge" style="width:28px;height:28px;background:#262626;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;">U</div>
+                        <div>
+                            <strong id="user-name-display" style="font-size:12px;display:block;">User</strong>
+                            <span id="user-role-tag" class="role-badge RIDER">RIDER</span>
+                        </div>
+                    </div>
+
+                    <button id="btn-signout" class="region-chip">
+                        <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+                    </button>
                 </div>
             </header>
 
@@ -143,7 +229,7 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
-    <!-- HIGH-SPEED CLERK JS INITIALIZATION -->
+    <!-- BULLETPROOF AUTHENTICATION ENGINE -->
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const RENDER_BACKEND = "https://kuber-tjn2.onrender.com";
@@ -153,64 +239,236 @@
 
             const PUBLISHABLE_KEY = "pk_test_ZW1lcmdpbmctbXV0dC04LmNsZXJrLmFjY291bnRzLmRldiQ";
 
-            async function initClerk() {
+            let selectedRole = "rider";
+            let authMode = "signin";
+
+            const authViewport = document.getElementById('auth-viewport');
+            const dashboardViewport = document.getElementById('dashboard-viewport');
+            const btnTabSignIn = document.getElementById('btn-tab-signin');
+            const btnTabRegister = document.getElementById('btn-tab-register');
+            const formSignIn = document.getElementById('form-signin');
+            const formRegister = document.getElementById('form-register');
+            const statusBanner = document.getElementById('auth-status-banner');
+
+            // Initialize Clerk SDK
+            async function initClerkSDK() {
                 if (!window.Clerk) {
-                    setTimeout(initClerk, 100);
+                    setTimeout(initClerkSDK, 200);
                     return;
                 }
 
                 try {
-                    await window.Clerk.load({
-                        publishableKey: PUBLISHABLE_KEY,
-                        appearance: {
-                            variables: {
-                                colorPrimary: '#06C167',
-                                colorBackground: '#141414',
-                                colorText: '#FFFFFF',
-                                colorTextSecondary: '#A6A6A6',
-                                colorInputBackground: '#1c1c1c',
-                                colorInputText: '#FFFFFF'
-                            }
+                    await window.Clerk.load({ publishableKey: PUBLISHABLE_KEY });
+
+                    window.Clerk.addListener(({ user }) => {
+                        if (user) {
+                            saveSession({
+                                role: selectedRole,
+                                email: user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : "user@clerk.dev",
+                                name: user.fullName || user.firstName || "Clerk OAuth User",
+                                user_id: user.id
+                            });
                         }
                     });
 
                     if (window.Clerk.user) {
-                        document.getElementById('auth-viewport').style.display = "none";
-                        document.getElementById('dashboard-viewport').style.display = "flex";
-
-                        const userBtn = document.getElementById('user-button');
-                        if (userBtn) window.Clerk.mountUserButton(userBtn);
-
-                        // Sync User with FastAPI
-                        const user = window.Clerk.user;
-                        fetch(`${API_BASE}/auth/clerk-sync`, {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({
-                                clerk_user_id: user.id,
-                                email: user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : "user@clerk.dev",
-                                full_name: user.fullName || user.firstName || "Clerk OAuth User",
-                                role: "RIDER"
-                            })
-                        }).catch(e => {});
-
-                        initMap();
-                    } else {
-                        document.getElementById('auth-viewport').style.display = "flex";
-                        document.getElementById('dashboard-viewport').style.display = "none";
-
-                        const signInDiv = document.getElementById('sign-in');
-                        if (signInDiv) {
-                            signInDiv.innerHTML = "";
-                            window.Clerk.mountSignIn(signInDiv);
-                        }
+                        const u = window.Clerk.user;
+                        saveSession({
+                            role: selectedRole,
+                            email: u.primaryEmailAddress ? u.primaryEmailAddress.emailAddress : "user@clerk.dev",
+                            name: u.fullName || u.firstName || "Clerk OAuth User",
+                            user_id: u.id
+                        });
                     }
-                } catch(e) {
-                    setTimeout(initClerk, 300);
+                } catch(e) {}
+            }
+            initClerkSDK();
+
+            // Session check
+            function checkSession() {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('logout') === 'true') {
+                    localStorage.removeItem('kuber_auth_session');
+                    if (window.Clerk && window.Clerk.signOut) {
+                        window.Clerk.signOut();
+                    }
                 }
+
+                const raw = localStorage.getItem('kuber_auth_session');
+                if (raw) {
+                    try {
+                        const session = JSON.parse(raw);
+                        if (session && session.email && session.role) {
+                            authViewport.style.display = "none";
+                            dashboardViewport.style.display = "flex";
+                            
+                            document.getElementById('user-name-display').innerText = session.name || "User";
+                            document.getElementById('user-role-tag').innerText = (session.role || "rider").toUpperCase();
+                            document.getElementById('user-avatar-badge').innerText = (session.role || "R")[0].toUpperCase();
+                            
+                            initMap();
+                            return;
+                        }
+                    } catch(e) {}
+                }
+                authViewport.style.display = "flex";
+                dashboardViewport.style.display = "none";
             }
 
-            initClerk();
+            // Mode Tabs
+            btnTabSignIn.addEventListener('click', () => {
+                btnTabSignIn.classList.add('active');
+                btnTabRegister.classList.remove('active');
+                formSignIn.classList.add('active');
+                formRegister.classList.remove('active');
+                authMode = "signin";
+            });
+
+            btnTabRegister.addEventListener('click', () => {
+                btnTabRegister.classList.add('active');
+                btnTabSignIn.classList.remove('active');
+                formRegister.classList.add('active');
+                formSignIn.classList.remove('active');
+                authMode = "register";
+            });
+
+            // Role Tiles
+            document.querySelectorAll('.role-tile').forEach(tile => {
+                tile.addEventListener('click', () => {
+                    document.querySelectorAll('.role-tile').forEach(t => t.classList.remove('active'));
+                    tile.classList.add('active');
+                    selectedRole = tile.getAttribute('data-role');
+                });
+            });
+
+            function showStatus(text, isError = false) {
+                statusBanner.style.display = "block";
+                statusBanner.style.borderColor = isError ? "#ff0844" : "#06C167";
+                statusBanner.style.color = isError ? "#ff0844" : "#06C167";
+                statusBanner.style.background = isError ? "rgba(255,8,68,0.15)" : "rgba(6,193,103,0.15)";
+                statusBanner.innerHTML = text;
+            }
+
+            // Save Session & Sync
+            function saveSession(session) {
+                localStorage.setItem('kuber_auth_session', JSON.stringify(session));
+                fetch(`${API_BASE}/auth/clerk-sync`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        clerk_user_id: session.user_id,
+                        email: session.email,
+                        full_name: session.name,
+                        role: session.role.toUpperCase()
+                    })
+                }).catch(e => {});
+
+                checkSession();
+            }
+
+            // Sign In Submit
+            formSignIn.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('signin-email').value;
+                const pwd = document.getElementById('signin-password').value;
+
+                showStatus(`⌛ Authenticating with ${API_BASE}/auth/login...`);
+
+                try {
+                    const res = await fetch(`${API_BASE}/auth/login`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({email: email, password: pwd})
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        saveSession({
+                            role: data.role.toLowerCase(),
+                            email: data.email,
+                            name: data.full_name,
+                            user_id: data.user_id,
+                            token: data.access_token
+                        });
+                    } else {
+                        showStatus("❌ Invalid Email or Password.", true);
+                    }
+                } catch (e) {
+                    showStatus(`❌ Cannot connect to backend at ${API_BASE}`, true);
+                }
+            });
+
+            // Register Submit
+            formRegister.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('reg-name').value;
+                const email = document.getElementById('reg-email').value;
+                const pwd = document.getElementById('reg-password').value;
+
+                showStatus(`⌛ Registering account via ${API_BASE}/auth/register...`);
+
+                try {
+                    const res = await fetch(`${API_BASE}/auth/register`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            email: email,
+                            password: pwd,
+                            full_name: name,
+                            role: selectedRole.toUpperCase()
+                        })
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        showStatus(`✅ Registration Successful for '${data.full_name}'! Signing in...`);
+                        setTimeout(() => {
+                            saveSession({
+                                role: data.role.toLowerCase(),
+                                email: data.email,
+                                name: data.full_name,
+                                user_id: data.user_id
+                            });
+                        }, 1000);
+                    } else {
+                        showStatus("❌ Registration failed. Email may already exist.", true);
+                    }
+                } catch (e) {
+                    showStatus(`❌ Cannot connect to backend at ${API_BASE}`, true);
+                }
+            });
+
+            // Google OAuth Handler
+            document.getElementById('btn-oauth-google').addEventListener('click', async () => {
+                showStatus("⌛ Opening Google OAuth Window...");
+                if (window.Clerk && window.Clerk.openSignIn) {
+                    try {
+                        await window.Clerk.openSignIn({ strategy: 'oauth_google' });
+                        return;
+                    } catch (e) {}
+                }
+                window.location.href = "https://emerging-mutt-8.clerk.accounts.dev/sign-in?redirect_url=" + encodeURIComponent(window.location.href);
+            });
+
+            // GitHub OAuth Handler
+            document.getElementById('btn-oauth-github').addEventListener('click', async () => {
+                showStatus("⌛ Opening GitHub OAuth Window...");
+                if (window.Clerk && window.Clerk.openSignIn) {
+                    try {
+                        await window.Clerk.openSignIn({ strategy: 'oauth_github' });
+                        return;
+                    } catch (e) {}
+                }
+                window.location.href = "https://emerging-mutt-8.clerk.accounts.dev/sign-in?redirect_url=" + encodeURIComponent(window.location.href);
+            });
+
+            // Sign Out
+            document.getElementById('btn-signout').addEventListener('click', async () => {
+                localStorage.removeItem('kuber_auth_session');
+                if (window.Clerk && window.Clerk.signOut) {
+                    await window.Clerk.signOut();
+                }
+                window.location.href = window.location.pathname + "?logout=true";
+            });
 
             // Leaflet Map Init
             let map = null;
@@ -222,6 +480,8 @@
                     L.control.zoom({ position: 'bottomright' }).addTo(map);
                 } catch(e) {}
             }
+
+            checkSession();
         });
     </script>
 </body>
