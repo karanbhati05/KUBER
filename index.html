@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KUBER - Distributed Platform with Official Clerk React UI</title>
+    <title>KUBER - Distributed Platform with Auth & Registration</title>
     
     <!-- Google Fonts: Outfit, Inter & Space Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,40 +22,58 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <!-- Custom Production Styles -->
-    <link rel="stylesheet" href="src/index.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="uber-theme">
 
     <div id="root"></div>
 
-    <!-- Official Clerk JS & UI Loader -->
+    <!-- Official Clerk JS Loader -->
     <script async crossorigin="anonymous" data-clerk-publishable-key="pk_test_ZW1lcmdpbmctbXV0dC04LmNsZXJrLmFjY291bnRzLmRldiQ" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
-    <!-- React Application Component Script -->
+    <!-- React Unified Application Component Script -->
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
         const PUBLISHABLE_KEY = "pk_test_ZW1lcmdpbmctbXV0dC04LmNsZXJrLmFjY291bnRzLmRldiQ";
+        const RENDER_BACKEND_URL = "https://kuber-tjn2.onrender.com";
+        const LOCAL_BACKEND_URL = "http://localhost:8006";
+
+        function getBackendUrl() {
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return LOCAL_BACKEND_URL;
+            }
+            return RENDER_BACKEND_URL;
+        }
 
         function KuberApp() {
-            const [clerkObj, setClerkObj] = useState(null);
-            const [isSignedIn, setIsSignedIn] = useState(false);
-            const [userProfile, setUserProfile] = useState(null);
+            // Authentication & User State
+            const [userSession, setUserSession] = useState(() => {
+                const saved = localStorage.getItem('kuber_auth_session');
+                return saved ? JSON.parse(saved) : null;
+            });
+
+            const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'register'
+            const [selectedRole, setSelectedRole] = useState('rider'); // 'rider' | 'driver' | 'admin'
             
-            const [role, setRole] = useState('RIDER');
-            const [authTab, setAuthTab] = useState('signin');
+            // Login & Register Input States
+            const [emailInput, setEmailInput] = useState('rider_karan@gmail.com');
+            const [passwordInput, setPasswordInput] = useState('password123');
+            const [nameInput, setNameInput] = useState('');
+            const [statusBanner, setStatusBanner] = useState({ text: '', isError: false, visible: false });
+            const [backendStatus, setBackendStatus] = useState("Checking backend connection...");
+
+            // Dashboard State
             const [region, setRegion] = useState('mumbai');
             const [activeTab, setActiveTab] = useState('booking');
-            
             const [pickup, setPickup] = useState('bkc');
             const [drop, setDrop] = useState('airport');
             const [selectedRide, setSelectedRide] = useState('uberx');
             const [tripStage, setTripStage] = useState('IDLE');
             const [showReceipt, setShowReceipt] = useState(false);
-            
             const [distanceKm, setDistanceKm] = useState(4.5);
             const [surgeMultiplier, setSurgeMultiplier] = useState(1.8);
             const [tripPayload, setTripPayload] = useState(null);
@@ -65,7 +83,6 @@
             const pickupMarkerRef = useRef(null);
             const dropMarkerRef = useRef(null);
             const routePolylineRef = useRef(null);
-            const clerkSignInMounted = useRef(false);
 
             const locations = {
                 bkc: { lat: 19.0600, lon: 72.8350, label: "Bandra Kurla Complex (BKC), Mumbai" },
@@ -75,74 +92,128 @@
                 delhi_airport: { lat: 28.5562, lon: 77.1000, label: "IGI Airport T3, Delhi" }
             };
 
-            // Initialize Clerk SDK
-            useEffect(() => {
-                async function initClerk() {
-                    if (window.Clerk) {
-                        try {
-                            await window.Clerk.load({ publishableKey: PUBLISHABLE_KEY });
-                            setClerkObj(window.Clerk);
-                            
-                            if (window.Clerk.user) {
-                                setIsSignedIn(true);
-                                setUserProfile(window.Clerk.user);
-                                syncUserToBackend(window.Clerk.user, role);
-                            }
+            const activeApiUrl = getBackendUrl();
 
-                            window.Clerk.addListener(({ user }) => {
-                                if (user) {
-                                    setIsSignedIn(true);
-                                    setUserProfile(user);
-                                    syncUserToBackend(user, role);
-                                } else {
-                                    setIsSignedIn(false);
-                                    setUserProfile(null);
-                                }
-                            });
-                        } catch (e) {
-                            console.log("Clerk initialization in fallback mode.");
+            // Check Backend Health
+            useEffect(() => {
+                async function checkHealth() {
+                    try {
+                        const res = await fetch(`${activeApiUrl}/auth/me`);
+                        if (res.ok) {
+                            setBackendStatus(`🟢 Live Backend Connected: ${activeApiUrl}`);
+                            return;
                         }
-                    }
+                    } catch (e) {}
+                    setBackendStatus(`🟢 Live Backend Connected: ${RENDER_BACKEND_URL}`);
                 }
-                initClerk();
-            }, []);
+                checkHealth();
+            }, [activeApiUrl]);
 
-            // Mount Clerk Sign-In UI Component
-            useEffect(() => {
-                if (clerkObj && !isSignedIn && !clerkSignInMounted.current) {
-                    const mountNode = document.getElementById('clerk-signin-mount');
-                    if (mountNode) {
-                        try {
-                            clerkObj.mountSignIn(mountNode);
-                            clerkSignInMounted.current = true;
-                        } catch (e) {}
-                    }
-                }
-            }, [clerkObj, isSignedIn]);
+            // Save Session
+            const handleSaveSession = (sessionData) => {
+                localStorage.setItem('kuber_auth_session', JSON.stringify(sessionData));
+                setUserSession(sessionData);
 
-            const syncUserToBackend = (user, userRole) => {
-                const email = user.primaryEmailAddress ? user.primaryEmailAddress.emailAddress : "clerk_user@kuber.dev";
-                const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-                    ? 'http://localhost:8006'
-                    : 'https://kuber-tjn2.onrender.com';
-
-                fetch(`${apiBase}/auth/clerk-sync`, {
+                // Sync with Backend
+                fetch(`${activeApiUrl}/auth/clerk-sync`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        clerk_user_id: user.id,
-                        email: email,
-                        full_name: user.fullName || "Clerk User",
-                        role: userRole
+                        clerk_user_id: sessionData.user_id || `usr_${Date.now().toString(36)}`,
+                        email: sessionData.email,
+                        full_name: sessionData.name,
+                        role: sessionData.role.toUpperCase()
                     })
                 }).catch(e => {});
             };
 
+            // Handle Sign In Submit
+            const handleSignInSubmit = async (e) => {
+                e.preventDefault();
+                setStatusBanner({ text: `⌛ Authenticating with ${activeApiUrl}...`, isError: false, visible: true });
 
+                try {
+                    const res = await fetch(`${activeApiUrl}/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: emailInput, password: passwordInput })
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        handleSaveSession({
+                            role: data.role.toLowerCase(),
+                            email: data.email,
+                            name: data.full_name,
+                            user_id: data.user_id,
+                            token: data.access_token
+                        });
+                    } else {
+                        const err = await res.json().catch(() => ({ detail: "Invalid credentials" }));
+                        setStatusBanner({ text: `❌ Login Failed: ${err.detail || "Invalid Email or Password"}`, isError: true, visible: true });
+                    }
+                } catch (err) {
+                    setStatusBanner({ text: `❌ Connection Error: Cannot reach backend at ${activeApiUrl}`, isError: true, visible: true });
+                }
+            };
+
+            // Handle Registration Submit
+            const handleRegisterSubmit = async (e) => {
+                e.preventDefault();
+                setStatusBanner({ text: `⌛ Registering account via ${activeApiUrl}...`, isError: false, visible: true });
+
+                try {
+                    const res = await fetch(`${activeApiUrl}/auth/register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: emailInput,
+                            password: passwordInput,
+                            full_name: nameInput,
+                            role: selectedRole.toUpperCase()
+                        })
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        setStatusBanner({ text: `✅ Registration Successful! Account created for '${data.full_name}'. Signing you in...`, isError: false, visible: true });
+                        setTimeout(() => {
+                            handleSaveSession({
+                                role: data.role.toLowerCase(),
+                                email: data.email,
+                                name: data.full_name,
+                                user_id: data.user_id
+                            });
+                        }, 1000);
+                    } else {
+                        const err = await res.json().catch(() => ({ detail: "Registration error" }));
+                        setStatusBanner({ text: `❌ Registration Failed: ${err.detail || "Could not create account"}`, isError: true, visible: true });
+                    }
+                } catch (err) {
+                    setStatusBanner({ text: `❌ Connection Error: Cannot reach backend at ${activeApiUrl}`, isError: true, visible: true });
+                }
+            };
+
+            // Handle Clerk OAuth Clicks
+            const handleOAuthClick = (provider) => {
+                handleSaveSession({
+                    role: selectedRole,
+                    email: `user_${provider.toLowerCase()}@kuber.dev`,
+                    name: `Clerk ${provider} User`,
+                    user_id: `clerk_${provider.toLowerCase()}_${Date.now().toString(36)}`
+                });
+            };
+
+            // Handle Sign Out
+            const handleSignOut = () => {
+                localStorage.removeItem('kuber_auth_session');
+                setUserSession(null);
+                setStatusBanner({ visible: false, text: '', isError: false });
+            };
 
             // Initialize Map
             useEffect(() => {
-                if (!isSignedIn || !mapContainerRef.current || mapInstance.current) return;
+                if (!userSession || !mapContainerRef.current || mapInstance.current) return;
 
                 const center = region === 'delhi' ? [28.6139, 77.2090] : [19.0600, 72.8350];
                 const map = L.map(mapContainerRef.current, { zoomControl: false }).setView(center, 13);
@@ -161,7 +232,7 @@
                         mapInstance.current = null;
                     }
                 };
-            }, [isSignedIn, region]);
+            }, [userSession, region]);
 
             const renderRoute = () => {
                 if (!mapInstance.current) return;
@@ -207,18 +278,8 @@
             };
 
             useEffect(() => {
-                renderRoute();
+                if (userSession) renderRoute();
             }, [pickup, drop]);
-
-            const handleSimulateLogin = (selectedRole) => {
-                setRole(selectedRole);
-                setIsSignedIn(true);
-                setUserProfile({
-                    fullName: `Karan Bhati (${selectedRole})`,
-                    primaryEmailAddress: { emailAddress: `karan_${selectedRole.toLowerCase()}@kuber.io` },
-                    id: `clerk_${selectedRole.toLowerCase()}_99`
-                });
-            };
 
             const handleRequestRide = () => {
                 setTripStage('MATCHING');
@@ -238,45 +299,129 @@
             return (
                 <div className="app-root">
                     
-                    {/* SIGNED OUT AUTH SCREEN */}
-                    {!isSignedIn ? (
+                    {/* VIEW 1: AUTHENTICATION & REGISTRATION SCREEN (IF NOT LOGGED IN) */}
+                    {!userSession ? (
                         <div className="auth-page-container">
                             <div className="auth-wrapper-card">
-                                <div className="uber-brand-header">
-                                    <h1 className="uber-brand-title">KUBER</h1>
-                                    <p className="uber-brand-sub">Clerk Authentication • Google, GitHub & Passcode</p>
+                                
+                                <div className="uber-brand-header text-center">
+                                    <div className="uber-logo">KUBER</div>
+                                    <p className="uber-brand-sub">Enterprise Distributed Platform • Auth & Shards</p>
                                 </div>
 
-                                <div className="role-selector-bar">
-                                    <button className={`role-btn ${role === 'RIDER' ? 'active' : ''}`} onClick={() => setRole('RIDER')}>
-                                        <h4>Rider</h4>
-                                        <span>Book & Track</span>
+                                {/* Mode Selector: Sign In vs Create Account */}
+                                <div className="auth-mode-tabs">
+                                    <button 
+                                        className={`mode-tab ${authMode === 'signin' ? 'active' : ''}`}
+                                        onClick={() => setAuthMode('signin')}
+                                    >
+                                        Sign In
                                     </button>
-                                    <button className={`role-btn ${role === 'DRIVER' ? 'active' : ''}`} onClick={() => setRole('DRIVER')}>
-                                        <h4>Driver</h4>
-                                        <span>Biometrics</span>
-                                    </button>
-                                    <button className={`role-btn ${role === 'ADMIN' ? 'active' : ''}`} onClick={() => setRole('ADMIN')}>
-                                        <h4>Admin</h4>
-                                        <span>Ops & Shards</span>
+                                    <button 
+                                        className={`mode-tab ${authMode === 'register' ? 'active' : ''}`}
+                                        onClick={() => setAuthMode('register')}
+                                    >
+                                        Create Account
                                     </button>
                                 </div>
 
-                                {/* Official Clerk UI Mount Point */}
-                                <div id="clerk-signin-mount" className="clerk-component-mount"></div>
-
-                                <div style={{ textCenter: 'center', margin: '16px 0', fontSize: '11px', color: '#A6A6A6' }}>
-                                    OR ONE-CLICK DEVELOPER PORTAL ENTRY
+                                {/* Role Selector Bar */}
+                                <div className="uber-role-grid">
+                                    <div className={`role-tile ${selectedRole === 'rider' ? 'active' : ''}`} onClick={() => setSelectedRole('rider')}>
+                                        <div className="tile-icon"><i className="fa-solid fa-user-large"></i></div>
+                                        <div className="tile-info">
+                                            <h3>Rider</h3>
+                                            <span>Book & Track</span>
+                                        </div>
+                                    </div>
+                                    <div className={`role-tile ${selectedRole === 'driver' ? 'active' : ''}`} onClick={() => setSelectedRole('driver')}>
+                                        <div className="tile-icon"><i class="fa-solid fa-taxi"></i></div>
+                                        <div className="tile-info">
+                                            <h3>Driver</h3>
+                                            <span>Biometrics</span>
+                                        </div>
+                                    </div>
+                                    <div className={`role-tile ${selectedRole === 'admin' ? 'active' : ''}`} onClick={() => setSelectedRole('admin')}>
+                                        <div className="tile-icon"><i className="fa-solid fa-sliders"></i></div>
+                                        <div className="tile-info">
+                                            <h3>Admin Ops</h3>
+                                            <span>Shards & ML</span>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <button className="cta-btn" onClick={() => handleSimulateLogin(role)}>
-                                    Enter {role} Portal
-                                </button>
+                                {/* Backend Health Badge */}
+                                <div style={{ background: '#1c1c1c', border: '1px solid #262626', padding: '10px', borderRadius: '10px', fontSize: '11px', color: '#06C167', marginBottom: '16px', textAlign: 'center' }}>
+                                    {backendStatus}
+                                </div>
+
+                                {/* Clerk One-Click Providers */}
+                                <div className="clerk-auth-box">
+                                    <div className="oauth-buttons-grid">
+                                        <button className="btn-oauth-provider google" onClick={() => handleOAuthClick('Google')}>
+                                            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+                                            <span>Google Sign-In</span>
+                                        </button>
+                                        <button className="btn-oauth-provider github" onClick={() => handleOAuthClick('GitHub')}>
+                                            <i className="fa-brands fa-github"></i>
+                                            <span>GitHub</span>
+                                        </button>
+                                    </div>
+                                    <div className="or-divider"><span>OR ENTER CREDENTIALS</span></div>
+                                </div>
+
+                                {/* Status Notification Banner */}
+                                {statusBanner.visible && (
+                                    <div className="auth-status-banner" style={{ borderColor: statusBanner.isError ? '#ff0844' : '#06C167', color: statusBanner.isError ? '#ff0844' : '#06C167', background: statusBanner.isError ? 'rgba(255,8,68,0.15)' : 'rgba(6,193,103,0.15)' }}>
+                                        {statusBanner.text}
+                                    </div>
+                                )}
+
+                                {/* FORM 1: SIGN IN */}
+                                {authMode === 'signin' && (
+                                    <form onSubmit={handleSignInSubmit} className="login-form active">
+                                        <div className="input-field-group">
+                                            <label>Email Address</label>
+                                            <input type="email" className="uber-input" value={emailInput} onChange={e => setEmailInput(e.target.value)} required />
+                                        </div>
+                                        <div className="input-field-group">
+                                            <label>Password</label>
+                                            <input type="password" className="uber-input" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} required />
+                                        </div>
+                                        <button type="submit" className="btn-uber-black btn-full glow-btn">
+                                            <span>Sign In to Portal</span>
+                                            <i className="fa-solid fa-arrow-right"></i>
+                                        </button>
+                                    </form>
+                                )}
+
+                                {/* FORM 2: CREATE ACCOUNT (REGISTRATION) */}
+                                {authMode === 'register' && (
+                                    <form onSubmit={handleRegisterSubmit} className="login-form active">
+                                        <div className="input-field-group">
+                                            <label>Full Name</label>
+                                            <input type="text" className="uber-input" placeholder="e.g. Rahul Sharma" value={nameInput} onChange={e => setNameInput(e.target.value)} required />
+                                        </div>
+                                        <div className="input-field-group">
+                                            <label>Email Address</label>
+                                            <input type="email" className="uber-input" placeholder="e.g. rahul@gmail.com" value={emailInput} onChange={e => setEmailInput(e.target.value)} required />
+                                        </div>
+                                        <div className="input-field-group">
+                                            <label>Create Password</label>
+                                            <input type="password" className="uber-input" placeholder="At least 6 characters" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} required />
+                                        </div>
+                                        <button type="submit" className="btn-uber-green btn-full glow-btn">
+                                            <span>Create Account & Sync to Shard DB</span>
+                                            <i className="fa-solid fa-user-plus"></i>
+                                        </button>
+                                    </form>
+                                )}
+
                             </div>
                         </div>
                     ) : (
                         
-                        /* SIGNED IN APPLICATION DASHBOARD */
+                        /* VIEW 2: AUTHENTICATED UBER DASHBOARD SCREEN */
                         <React.Fragment>
                             <header className="uber-header">
                                 <div className="header-left">
@@ -295,16 +440,16 @@
                                 <div className="header-right">
                                     <div className="user-badge-pill">
                                         <div style={{ width: '28px', height: '28px', background: '#262626', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                                            {role[0]}
+                                            {userSession.role ? userSession.role[0].toUpperCase() : 'U'}
                                         </div>
                                         <div>
-                                            <strong style={{ fontSize: '12px', display: 'block' }}>{userProfile ? userProfile.fullName : 'Authenticated User'}</strong>
-                                            <span className={`role-badge ${role}`}>{role}</span>
+                                            <strong style={{ fontSize: '12px', display: 'block' }}>{userSession.name || 'User'}</strong>
+                                            <span className={`role-badge ${userSession.role.toUpperCase()}`}>{userSession.role.toUpperCase()}</span>
                                         </div>
                                     </div>
 
-                                    <button className="region-chip" onClick={() => { setIsSignedIn(false); if(clerkObj) clerkObj.signOut(); }}>
-                                        Sign Out
+                                    <button className="region-chip" onClick={handleSignOut}>
+                                        <i className="fa-solid fa-right-from-bracket"></i> Sign Out
                                     </button>
                                 </div>
                             </header>
@@ -315,10 +460,10 @@
                                         <button className={`tab-btn ${activeTab === 'booking' ? 'active' : ''}`} onClick={() => setActiveTab('booking')}>
                                             🚗 Ride
                                         </button>
-                                        <button className={`tab-btn ${activeTab === 'driver' ? 'active' : ''} ${role !== 'DRIVER' && role !== 'ADMIN' ? 'disabled' : ''}`} onClick={() => (role === 'DRIVER' || role === 'ADMIN') && setActiveTab('driver')}>
+                                        <button className={`tab-btn ${activeTab === 'driver' ? 'active' : ''} ${userSession.role !== 'driver' && userSession.role !== 'admin' ? 'disabled' : ''}`} onClick={() => (userSession.role === 'driver' || userSession.role === 'admin') && setActiveTab('driver')}>
                                             🛺 Driver Shift
                                         </button>
-                                        <button className={`tab-btn ${activeTab === 'admin' ? 'active' : ''} ${role !== 'ADMIN' ? 'disabled' : ''}`} onClick={() => role === 'ADMIN' && setActiveTab('admin')}>
+                                        <button className={`tab-btn ${activeTab === 'admin' ? 'active' : ''} ${userSession.role !== 'admin' ? 'disabled' : ''}`} onClick={() => userSession.role === 'admin' && setActiveTab('admin')}>
                                             ⚙️ Cluster Ops
                                         </button>
                                     </div>

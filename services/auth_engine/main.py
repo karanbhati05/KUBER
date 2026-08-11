@@ -19,7 +19,9 @@ except ModuleNotFoundError:
 
 app = FastAPI(
     title="KUBER Auth & RBAC Engine",
-    description="Microservice providing JWT authentication, User management, and Role-Based Access Control (RBAC)"
+    description="Microservice providing JWT authentication, User management, and Role-Based Access Control (RBAC)",
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
 app.add_middleware(
@@ -29,6 +31,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/")
+def root():
+    return {
+        "status": "online",
+        "system": "KUBER Auth & RBAC Engine",
+        "version": "1.0.0",
+        "docs_url": "/docs",
+        "endpoints": {
+            "register": "POST /auth/register",
+            "login": "POST /auth/login",
+            "clerk_sync": "POST /auth/clerk-sync",
+            "me": "GET /auth/me"
+        }
+    }
+
 
 # JWT & Password Hashing Settings
 SECRET_KEY = os.getenv("JWT_SECRET", "kuber_jwt_secret_key_2026")
