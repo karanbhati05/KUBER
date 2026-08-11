@@ -9,8 +9,6 @@ A high-throughput, event-driven microservice platform mimicking core distributed
 | Component | Architecture / Technology | Production Endpoint | Status |
 | :--- | :--- | :--- | :--- |
 | **Frontend Application** | HTML5, Vanilla JS, Leaflet | **[Live Vercel Application](https://kuber-sepia.vercel.app)** | 🟢 `ONLINE` |
-
-
 | **Microservice Backend** | Python 3.11, FastAPI, Uvicorn | **[https://kuber-tjn2.onrender.com](https://kuber-tjn2.onrender.com)** | 🟢 `ONLINE` |
 | **API Documentation** | Interactive OpenAPI Swagger UI | **[https://kuber-tjn2.onrender.com/docs](https://kuber-tjn2.onrender.com/docs)** | 🟢 `ONLINE` |
 | **OAuth Identity** | Clerk JS SDK | Google & GitHub One-Click OAuth | 🟢 `ONLINE` |
