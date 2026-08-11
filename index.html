@@ -446,7 +446,7 @@
                         return;
                     } catch (e) {}
                 }
-                window.location.href = "https://emerging-mutt-8.clerk.accounts.dev/sign-in?redirect_url=" + encodeURIComponent(window.location.href);
+                showStatus("⌛ Clerk initializing... Click again in 2 seconds.", true);
             });
 
             // GitHub OAuth Handler
@@ -458,8 +458,9 @@
                         return;
                     } catch (e) {}
                 }
-                window.location.href = "https://emerging-mutt-8.clerk.accounts.dev/sign-in?redirect_url=" + encodeURIComponent(window.location.href);
+                showStatus("⌛ Clerk initializing... Click again in 2 seconds.", true);
             });
+
 
             // Sign Out
             document.getElementById('btn-signout').addEventListener('click', async () => {
