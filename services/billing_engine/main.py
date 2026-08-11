@@ -2,8 +2,13 @@ import uuid
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from models import Base, Trip, TripStatus
-from database import resolve_shard_key, get_db_for_shard, init_shard_databases
+try:
+    from models import Base, Trip, TripStatus
+    from database import resolve_shard_key, get_db_for_shard, init_shard_databases
+except ModuleNotFoundError:
+    from services.billing_engine.models import Base, Trip, TripStatus
+    from services.billing_engine.database import resolve_shard_key, get_db_for_shard, init_shard_databases
+
 
 app = FastAPI(
     title="KUBER Billing Engine",

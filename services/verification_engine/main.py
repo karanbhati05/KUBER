@@ -2,7 +2,11 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from pydantic import BaseModel
 from typing import Optional
 import numpy as np
-from facenet_utils import FaceNetEmbedder
+try:
+    from facenet_utils import FaceNetEmbedder
+except ModuleNotFoundError:
+    from services.verification_engine.facenet_utils import FaceNetEmbedder
+
 
 from fastapi.middleware.cors import CORSMiddleware
 

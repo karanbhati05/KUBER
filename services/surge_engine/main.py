@@ -4,7 +4,11 @@ import pandas as pd
 import numpy as np
 import joblib
 import os
-from train_model import train_and_save_model, MODEL_PATH
+try:
+    from train_model import train_and_save_model, MODEL_PATH
+except ModuleNotFoundError:
+    from services.surge_engine.train_model import train_and_save_model, MODEL_PATH
+
 
 from fastapi.middleware.cors import CORSMiddleware
 

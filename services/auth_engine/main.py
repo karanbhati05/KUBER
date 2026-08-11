@@ -9,8 +9,13 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
-from models import Base, User, UserRole
-from database import get_db, init_auth_db
+try:
+    from models import Base, User, UserRole
+    from database import get_db, init_auth_db
+except ModuleNotFoundError:
+    from services.auth_engine.models import Base, User, UserRole
+    from services.auth_engine.database import get_db, init_auth_db
+
 
 app = FastAPI(
     title="KUBER Auth & RBAC Engine",

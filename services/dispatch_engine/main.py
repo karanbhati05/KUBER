@@ -5,7 +5,11 @@ import httpx
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 import redis.asyncio as redis
-from matchmaker import encode_geohash, solve_bipartite_matching
+try:
+    from matchmaker import encode_geohash, solve_bipartite_matching
+except ModuleNotFoundError:
+    from services.dispatch_engine.matchmaker import encode_geohash, solve_bipartite_matching
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
